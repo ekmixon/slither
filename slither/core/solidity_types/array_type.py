@@ -46,13 +46,15 @@ class ArrayType(Type):
 
     def __str__(self):
         if self._length:
-            return str(self._type) + "[{}]".format(str(self._length_value))
-        return str(self._type) + "[]"
+            return str(self._type) + f"[{str(self._length_value)}]"
+        return f"{str(self._type)}[]"
 
     def __eq__(self, other):
-        if not isinstance(other, ArrayType):
-            return False
-        return self._type == other.type and self.length == other.length
+        return (
+            self._type == other.type and self.length == other.length
+            if isinstance(other, ArrayType)
+            else False
+        )
 
     def __hash__(self):
         return hash(str(self))

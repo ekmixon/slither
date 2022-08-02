@@ -47,8 +47,7 @@ def _detect_dangerous_timestamp(
     """
     ret = []
     for f in [f for f in contract.functions if f.contract_declarer == contract]:
-        nodes = _timestamp(f)
-        if nodes:
+        if nodes := _timestamp(f):
             ret.append((f, nodes))
     return ret
 

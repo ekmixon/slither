@@ -13,8 +13,7 @@ def detect_shadowing(contract):
             variables_fathers += father.state_variables_declared
 
     for var in contract.state_variables_declared:
-        shadow = [v for v in variables_fathers if v.name == var.name]
-        if shadow:
+        if shadow := [v for v in variables_fathers if v.name == var.name]:
             ret.append([var] + shadow)
     return ret
 
@@ -74,8 +73,7 @@ contract DerivedContract is BaseContract{
         """
         results = []
         for c in self.contracts:
-            shadowing = detect_shadowing(c)
-            if shadowing:
+            if shadowing := detect_shadowing(c):
                 for all_variables in shadowing:
                     shadow = all_variables[0]
                     variables = all_variables[1:]

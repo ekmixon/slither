@@ -37,8 +37,9 @@ class Assembly(AbstractDetector):
             if f.contract_declarer != contract:
                 continue
             nodes = f.nodes
-            assembly_nodes = [n for n in nodes if self._contains_inline_assembly_use(n)]
-            if assembly_nodes:
+            if assembly_nodes := [
+                n for n in nodes if self._contains_inline_assembly_use(n)
+            ]:
                 ret.append((f, assembly_nodes))
         return ret
 

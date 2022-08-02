@@ -48,14 +48,11 @@ def _detect_tautology_or_contradiction(low, high, cval, op):
         # its a contradiction if
         # low(a) > cval
         return (high <= cval) or (low > cval)
-    if op == BinaryType.GREATER_EQUAL:
-        # a >= cval
-        # its a tautology if
-        # low(a) >= cval
-        # its a contradiction if
-        # high(a) < cval
-        return (low >= cval) or (high < cval)
-    return False
+    return (
+        (low >= cval) or (high < cval)
+        if op == BinaryType.GREATER_EQUAL
+        else False
+    )
 
 
 class TypeBasedTautology(AbstractDetector):
@@ -157,8 +154,7 @@ contract A {
         """
         results = []
         for contract in self.contracts:
-            tautologies = self.detect_type_based_tautologies(contract)
-            if tautologies:
+            if tautologies := self.detect_type_based_tautologies(contract):
                 for (func, nodes) in tautologies:
                     for node in nodes:
                         info = [func, " contains a tautology or contradiction:\n"]

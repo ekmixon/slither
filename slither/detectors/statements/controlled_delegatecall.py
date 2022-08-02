@@ -6,13 +6,18 @@ from slither.analyses.data_dependency.data_dependency import is_tainted
 def controlled_delegatecall(function):
     ret = []
     for node in function.nodes:
-        for ir in node.irs:
-            if isinstance(ir, LowLevelCall) and ir.function_name in [
+        ret.extend(
+            node
+            for ir in node.irs
+            if isinstance(ir, LowLevelCall)
+            and ir.function_name
+            in [
                 "delegatecall",
                 "callcode",
-            ]:
-                if is_tainted(ir.destination, function.contract):
-                    ret.append(node)
+            ]
+            and is_tainted(ir.destination, function.contract)
+        )
+
     return ret
 
 
@@ -51,8 +56,7 @@ Bob calls `delegate` and delegates the execution to his malicious contract. As a
                 # As functions to upgrades the destination lead to too many FPs
                 if contract.is_upgradeable_proxy and f.is_protected():
                     continue
-                nodes = controlled_delegatecall(f)
-                if nodes:
+                if nodes := controlled_delegatecall(f):
                     func_info = [
                         f,
                         " uses delegatecall to a input-controlled function id\n",

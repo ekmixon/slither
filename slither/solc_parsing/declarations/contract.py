@@ -122,9 +122,7 @@ class ContractSolc:
         return self._slither_parser.get_key()
 
     def get_children(self, key="nodes") -> str:
-        if self.is_compact_ast:
-            return key
-        return "children"
+        return key if self.is_compact_ast else "children"
 
     @property
     def remapping(self) -> Dict[str, str]:
@@ -142,11 +140,7 @@ class ContractSolc:
     ###################################################################################
 
     def _parse_contract_info(self):
-        if self.is_compact_ast:
-            attributes = self._data
-        else:
-            attributes = self._data["attributes"]
-
+        attributes = self._data if self.is_compact_ast else self._data["attributes"]
         self._contract.is_interface = False
         if "contractKind" in attributes:
             if attributes["contractKind"] == "interface":
@@ -189,43 +183,41 @@ class ContractSolc:
                     #  called with no arguments, while None implies no constructor was called).
                     if "arguments" in base_contract and base_contract["arguments"] is not None:
                         self.baseConstructorContractsCalled.append(referencedDeclaration)
-        else:
-            # Parse base contracts + constructors in legacy-ast
-            if "children" in self._data:
-                for base_contract in self._data["children"]:
-                    if base_contract["name"] != "InheritanceSpecifier":
-                        continue
-                    if "children" not in base_contract or len(base_contract["children"]) == 0:
-                        continue
-                    # Obtain all items for this base contract specification (base contract, followed by arguments)
-                    base_contract_items = base_contract["children"]
-                    if (
-                        "name" not in base_contract_items[0]
-                        or base_contract_items[0]["name"] != "UserDefinedTypeName"
-                    ):
-                        continue
-                    if (
-                        "attributes" not in base_contract_items[0]
-                        or "referencedDeclaration" not in base_contract_items[0]["attributes"]
-                    ):
-                        continue
+        elif "children" in self._data:
+            for base_contract in self._data["children"]:
+                if base_contract["name"] != "InheritanceSpecifier":
+                    continue
+                if "children" not in base_contract or len(base_contract["children"]) == 0:
+                    continue
+                # Obtain all items for this base contract specification (base contract, followed by arguments)
+                base_contract_items = base_contract["children"]
+                if (
+                    "name" not in base_contract_items[0]
+                    or base_contract_items[0]["name"] != "UserDefinedTypeName"
+                ):
+                    continue
+                if (
+                    "attributes" not in base_contract_items[0]
+                    or "referencedDeclaration" not in base_contract_items[0]["attributes"]
+                ):
+                    continue
 
-                    # Obtain our contract reference and add it to our base contract list
-                    referencedDeclaration = base_contract_items[0]["attributes"][
-                        "referencedDeclaration"
-                    ]
-                    self.baseContracts.append(referencedDeclaration)
+                # Obtain our contract reference and add it to our base contract list
+                referencedDeclaration = base_contract_items[0]["attributes"][
+                    "referencedDeclaration"
+                ]
+                self.baseContracts.append(referencedDeclaration)
 
-                    # If we have an 'attributes'->'arguments' which is None, this is not a constructor call.
-                    if (
-                        "attributes" not in base_contract
-                        or "arguments" not in base_contract["attributes"]
-                        or base_contract["attributes"]["arguments"] is not None
-                    ):
-                        self.baseConstructorContractsCalled.append(referencedDeclaration)
+                # If we have an 'attributes'->'arguments' which is None, this is not a constructor call.
+                if (
+                    "attributes" not in base_contract
+                    or "arguments" not in base_contract["attributes"]
+                    or base_contract["attributes"]["arguments"] is not None
+                ):
+                    self.baseConstructorContractsCalled.append(referencedDeclaration)
 
     def _parse_contract_items(self):
-        if not self.get_children() in self._data:  # empty contract
+        if self.get_children() not in self._data:  # empty contract
             return
         for item in self._data[self.get_children()]:
             if item[self.get_key()] == "FunctionDefinition":
@@ -247,7 +239,7 @@ class ContractSolc:
             elif item[self.get_key()] == "UsingForDirective":
                 self._usingForNotParsed.append(item)
             else:
-                raise ParsingError("Unknown contract item: " + item[self.get_key()])
+                raise ParsingError(f"Unknown contract item: {item[self.get_key()]}")
         return
 
     def _parse_struct(self, struct: Dict):
@@ -418,13 +410,10 @@ class ContractSolc:
         elem_parser = Cls_parser(
             elem, element_parser.function_not_parsed, self, self.slither_parser
         )
-        if (
-            element_parser.referenced_declaration
-            and element_parser.referenced_declaration in explored_reference_id
-        ):
-            # Already added from other fathers
-            return
         if element_parser.referenced_declaration:
+            if element_parser.referenced_declaration in explored_reference_id:
+                # Already added from other fathers
+                return
             explored_reference_id.add(element_parser.referenced_declaration)
         elem_parser.analyze_params()
         if isinstance(elem, Modifier):
@@ -576,7 +565,7 @@ class ContractSolc:
             if "canonicalName" in enum["attributes"]:
                 canonicalName = enum["attributes"]["canonicalName"]
             else:
-                canonicalName = self._contract.name + "." + name
+                canonicalName = f"{self._contract.name}.{name}"
         values = []
         for child in enum[self.get_children("members")]:
             assert child[self.get_key()] == "EnumValue"

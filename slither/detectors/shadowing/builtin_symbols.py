@@ -129,11 +129,11 @@ contract Bug {
         Returns:
             list of tuple: (type, definition, local variable parent)"""
 
-        results = []
-        for local in function_or_modifier.variables:
-            if self.is_builtin_symbol(local.name):
-                results.append((self.SHADOWING_LOCAL_VARIABLE, local))
-        return results
+        return [
+            (self.SHADOWING_LOCAL_VARIABLE, local)
+            for local in function_or_modifier.variables
+            if self.is_builtin_symbol(local.name)
+        ]
 
     def detect_builtin_shadowing_definitions(self, contract):
         """Detects if functions, access modifiers, events, state variables, or local variables are named after built-in
@@ -175,8 +175,7 @@ contract Bug {
 
         results = []
         for contract in self.contracts:
-            shadows = self.detect_builtin_shadowing_definitions(contract)
-            if shadows:
+            if shadows := self.detect_builtin_shadowing_definitions(contract):
                 for shadow in shadows:
                     # Obtain components
                     shadow_type = shadow[0]

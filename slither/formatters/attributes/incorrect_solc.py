@@ -41,20 +41,20 @@ def _determine_solc_version_replacement(used_solc_version):
         minor_version = ".".join(version[2:])[2]
         if minor_version == "4":
             # Replace with 0.4.25
-            return "pragma solidity " + REPLACEMENT_VERSIONS[0] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[0]};"
         if minor_version == "5":
             # Replace with 0.5.3
-            return "pragma solidity " + REPLACEMENT_VERSIONS[1] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[1]};"
         raise FormatImpossible(f"Unknown version {versions}")
     if len(versions) == 2:
         version_right = versions[1]
         minor_version_right = ".".join(version_right[2:])[2]
         if minor_version_right == "4":
             # Replace with 0.4.25
-            return "pragma solidity " + REPLACEMENT_VERSIONS[0] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[0]};"
         if minor_version_right in ["5", "6"]:
             # Replace with 0.5.3
-            return "pragma solidity " + REPLACEMENT_VERSIONS[1] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[1]};"
     return None
 
 

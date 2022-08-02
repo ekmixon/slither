@@ -45,8 +45,7 @@ Bob is the owner of `TxOrigin`. Bob calls Eve's contract. Eve's contract calls `
         Returns:
             (bool)
         """
-        solidity_var_read = node.solidity_variables_read
-        if solidity_var_read:
+        if solidity_var_read := node.solidity_variables_read:
             return any(v.name == "tx.origin" for v in solidity_var_read) and all(
                 v.name != "msg.sender" for v in solidity_var_read
             )
@@ -60,10 +59,11 @@ Bob is the owner of `TxOrigin`. Bob calls Eve's contract. Eve's contract calls `
             condtional_nodes = [
                 n for n in nodes if n.contains_if() or n.contains_require_or_assert()
             ]
-            bad_tx_nodes = [
-                n for n in condtional_nodes if self._contains_incorrect_tx_origin_use(n)
-            ]
-            if bad_tx_nodes:
+            if bad_tx_nodes := [
+                n
+                for n in condtional_nodes
+                if self._contains_incorrect_tx_origin_use(n)
+            ]:
                 ret.append((f, bad_tx_nodes))
         return ret
 

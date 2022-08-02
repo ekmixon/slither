@@ -27,4 +27,4 @@ class MemberAccess(ExpressionTyped):
         return self._type
 
     def __str__(self):
-        return str(self.expression) + "." + self.member_name
+        return f"{str(self.expression)}.{self.member_name}"

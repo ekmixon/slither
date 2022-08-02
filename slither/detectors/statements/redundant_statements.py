@@ -61,12 +61,15 @@ Each commented line references types/identifiers, but performs no action with th
         for function in contract.functions_and_modifiers_declared:
 
             # Loop through each node in this function.
-            for node in function.nodes:
-                if node.expression:
-                    if node.type == NodeType.EXPRESSION and isinstance(
-                        node.expression, self.REDUNDANT_TOP_LEVEL_EXPRESSIONS
-                    ):
-                        results.append(node)
+            results.extend(
+                node
+                for node in function.nodes
+                if node.expression
+                and node.type == NodeType.EXPRESSION
+                and isinstance(
+                    node.expression, self.REDUNDANT_TOP_LEVEL_EXPRESSIONS
+                )
+            )
 
         return results
 
@@ -80,9 +83,9 @@ Each commented line references types/identifiers, but performs no action with th
         """
         results = []
         for contract in self.contracts:
-            redundant_statements = self.detect_redundant_statements_contract(contract)
-            if redundant_statements:
-
+            if redundant_statements := self.detect_redundant_statements_contract(
+                contract
+            ):
                 for redundant_statement in redundant_statements:
                     info = ['Redundant expression "', redundant_statement, '" in', contract, "\n"]
                     json = self.generate_result(info)

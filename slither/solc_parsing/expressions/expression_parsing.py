@@ -67,11 +67,7 @@ def filter_name(value: str) -> str:
     value = value.replace("returns (", "returns(")
     value = value.replace(" calldata", "")
 
-    # remove the text remaining after functio(...)
-    # which should only be ..returns(...)
-    # nested parenthesis so we use a system of counter on parenthesis
-    idx = value.find("(")
-    if idx:
+    if idx := value.find("("):
         counter = 1
         max_idx = len(value)
         while counter:
@@ -145,12 +141,12 @@ def parse_call(expression: Dict, caller_context):  # pylint: disable=too-many-st
             call_with_options = expression["expression"]
             for idx, name in enumerate(call_with_options.get("names", [])):
                 option = parse_expression(call_with_options["options"][idx], caller_context)
-                if name == "value":
-                    call_value = option
                 if name == "gas":
                     call_gas = option
-                if name == "salt":
+                elif name == "salt":
                     call_salt = option
+                elif name == "value":
+                    call_value = option
         arguments = []
         if expression["arguments"]:
             arguments = [parse_expression(a, caller_context) for a in expression["arguments"]]
@@ -202,11 +198,10 @@ def _parse_elementary_type_name_expression(
     # uint;
     if is_compact_ast:
         value = expression["typeName"]
+    elif "children" in expression:
+        value = expression["children"][0]["attributes"]["name"]
     else:
-        if "children" in expression:
-            value = expression["children"][0]["attributes"]["name"]
-        else:
-            value = expression["attributes"]["value"]
+        value = expression["attributes"]["value"]
     if isinstance(value, dict):
         t = parse_type(value, caller_context)
     else:

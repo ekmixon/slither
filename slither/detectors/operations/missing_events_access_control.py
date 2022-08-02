@@ -73,9 +73,12 @@ contract C {
             for node in function.nodes:
                 for sv in node.state_variables_written:
                     if is_tainted(sv, function) and sv.type == ElementaryType("address"):
-                        for mod in function.contract.modifiers:
-                            if sv in mod.state_variables_read:
-                                nodes.append((node, sv, mod))
+                        nodes.extend(
+                            (node, sv, mod)
+                            for mod in function.contract.modifiers
+                            if sv in mod.state_variables_read
+                        )
+
             if nodes:
                 results.append((function, nodes))
         return results

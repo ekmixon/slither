@@ -93,8 +93,9 @@ contract C {
                         and isinstance(sv.type, ElementaryType)
                         and sv.type.type in Int + Uint
                     ):
-                        used_nodes = self._detect_unprotected_use(contract, sv)
-                        if used_nodes:
+                        if used_nodes := self._detect_unprotected_use(
+                            contract, sv
+                        ):
                             nodes.append((node, used_nodes))
 
             if nodes:

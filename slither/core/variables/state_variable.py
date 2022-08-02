@@ -47,7 +47,13 @@ class StateVariable(ChildContract, Variable):
         :return: str: func_name(type1,type2) returns(type3)
         """
         name, parameters, returnVars = self.signature
-        return name + "(" + ",".join(parameters) + ") returns(" + ",".join(returnVars) + ")"
+        return (
+            f"{name}("
+            + ",".join(parameters)
+            + ") returns("
+            + ",".join(returnVars)
+            + ")"
+        )
 
     # endregion
     ###################################################################################
@@ -58,7 +64,7 @@ class StateVariable(ChildContract, Variable):
 
     @property
     def canonical_name(self) -> str:
-        return "{}.{}".format(self.contract.name, self.name)
+        return f"{self.contract.name}.{self.name}"
 
     @property
     def full_name(self) -> str:
@@ -68,7 +74,7 @@ class StateVariable(ChildContract, Variable):
         :return: the function signature without the return values
         """
         name, parameters, _ = self.signature
-        return name + "(" + ",".join(parameters) + ")"
+        return f"{name}(" + ",".join(parameters) + ")"
 
     # endregion
     ###################################################################################

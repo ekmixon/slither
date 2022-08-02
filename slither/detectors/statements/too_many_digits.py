@@ -70,9 +70,7 @@ Use:
         for contract in self.compilation_unit.contracts_derived:
             # iterate over all functions
             for f in contract.functions:
-                # iterate over all the nodes
-                ret = self._detect_too_many_digits(f)
-                if ret:
+                if ret := self._detect_too_many_digits(f):
                     func_info = [f, " uses literals with too many digits:"]
                     for node in ret:
                         node_info = func_info + ["\n\t- ", node, "\n"]

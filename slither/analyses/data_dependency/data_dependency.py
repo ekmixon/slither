@@ -253,15 +253,15 @@ def pprint_dependency(context):
     print("#### SSA ####")
     context = context.context
     for k, values in context[KEY_SSA].items():
-        print("{} ({}):".format(k, id(k)))
+        print(f"{k} ({id(k)}):")
         for v in values:
-            print("\t- {}".format(v))
+            print(f"\t- {v}")
 
     print("#### NON SSA ####")
     for k, values in context[KEY_NON_SSA].items():
-        print("{} ({}):".format(k, hex(id(k))))
+        print(f"{k} ({hex(id(k))}):")
         for v in values:
-            print("\t- {} ({})".format(v, hex(id(v))))
+            print(f"\t- {v} ({hex(id(v))})")
 
 
 # endregion
@@ -284,8 +284,8 @@ def compute_dependency_contract(contract, compilation_unit: "SlitherCompilationU
     if KEY_SSA in contract.context:
         return
 
-    contract.context[KEY_SSA] = dict()
-    contract.context[KEY_SSA_UNPROTECTED] = dict()
+    contract.context[KEY_SSA] = {}
+    contract.context[KEY_SSA_UNPROTECTED] = {}
 
     for function in contract.functions + contract.modifiers:
         compute_dependency_function(function)
@@ -307,7 +307,7 @@ def propagate_function(contract, function, context_key, context_key_non_ssa):
     # Propage data dependency
     data_depencencies = function.context[context_key]
     for (key, values) in data_depencencies.items():
-        if not key in contract.context[context_key]:
+        if key not in contract.context[context_key]:
             contract.context[context_key][key] = set(values)
         else:
             contract.context[context_key][key].union(values)
@@ -341,7 +341,7 @@ def propagate_contract(contract, context_key, context_key_non_ssa):
 
 
 def add_dependency(lvalue, function, ir, is_protected):
-    if not lvalue in function.context[KEY_SSA]:
+    if lvalue not in function.context[KEY_SSA]:
         function.context[KEY_SSA][lvalue] = set()
         if not is_protected:
             function.context[KEY_SSA_UNPROTECTED][lvalue] = set()
@@ -365,8 +365,8 @@ def compute_dependency_function(function):
     if KEY_SSA in function.context:
         return
 
-    function.context[KEY_SSA] = dict()
-    function.context[KEY_SSA_UNPROTECTED] = dict()
+    function.context[KEY_SSA] = {}
+    function.context[KEY_SSA_UNPROTECTED] = {}
 
     is_protected = function.is_protected()
     for node in function.nodes:
@@ -375,8 +375,7 @@ def compute_dependency_function(function):
                 if isinstance(ir.lvalue, LocalIRVariable) and ir.lvalue.is_storage:
                     continue
                 if isinstance(ir.lvalue, ReferenceVariable):
-                    lvalue = ir.lvalue.points_to
-                    if lvalue:
+                    if lvalue := ir.lvalue.points_to:
                         add_dependency(lvalue, function, ir, is_protected)
                 add_dependency(ir.lvalue, function, ir, is_protected)
 
@@ -417,10 +416,10 @@ def convert_variable_to_non_ssa(v):
 
 def convert_to_non_ssa(data_depencies):
     # Need to create new set() as its changed during iteration
-    ret = dict()
+    ret = {}
     for (k, values) in data_depencies.items():
         var = convert_variable_to_non_ssa(k)
-        if not var in ret:
+        if var not in ret:
             ret[var] = set()
         ret[var] = ret[var].union({convert_variable_to_non_ssa(v) for v in values})
 

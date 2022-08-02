@@ -8,35 +8,35 @@ from slither.slithir.variables import Constant
 
 
 def is_division(ir):
-    if isinstance(ir, Binary):
-        if ir.type == BinaryType.DIVISION:
-            return True
+    if isinstance(ir, Binary) and ir.type == BinaryType.DIVISION:
+        return True
 
-    if isinstance(ir, LibraryCall):
-        if ir.function.name.lower() in [
+    return bool(
+        isinstance(ir, LibraryCall)
+        and ir.function.name.lower()
+        in [
             "div",
             "safediv",
-        ]:
-            if len(ir.arguments) == 2:
-                if ir.lvalue:
-                    return True
-    return False
+        ]
+        and len(ir.arguments) == 2
+        and ir.lvalue
+    )
 
 
 def is_multiplication(ir):
-    if isinstance(ir, Binary):
-        if ir.type == BinaryType.MULTIPLICATION:
-            return True
+    if isinstance(ir, Binary) and ir.type == BinaryType.MULTIPLICATION:
+        return True
 
-    if isinstance(ir, LibraryCall):
-        if ir.function.name.lower() in [
+    return bool(
+        isinstance(ir, LibraryCall)
+        and ir.function.name.lower()
+        in [
             "mul",
             "safemul",
-        ]:
-            if len(ir.arguments) == 2:
-                if ir.lvalue:
-                    return True
-    return False
+        ]
+        and len(ir.arguments) == 2
+        and ir.lvalue
+    )
 
 
 def is_assert(node):
@@ -45,9 +45,7 @@ def is_assert(node):
     # Old Solidity code where using an internal 'assert(bool)' function
     # While we dont check that this function is correct, we assume it is
     # To avoid too many FP
-    if "assert(bool)" in [c.full_name for c in node.internal_calls]:
-        return True
-    return False
+    return "assert(bool)" in [c.full_name for c in node.internal_calls]
 
 
 def _explore(to_explore, f_results, divisions):  # pylint: disable=too-many-branches
@@ -65,13 +63,16 @@ def _explore(to_explore, f_results, divisions):  # pylint: disable=too-many-bran
 
         for ir in node.irs:
             # check for Constant, has its not hashable (TODO: make Constant hashable)
-            if isinstance(ir, Assignment) and not isinstance(ir.rvalue, Constant):
-                if ir.rvalue in divisions:
-                    # Avoid dupplicate. We dont use set so we keep the order of the nodes
-                    if node not in divisions[ir.rvalue]:
-                        divisions[ir.lvalue] = divisions[ir.rvalue] + [node]
-                    else:
-                        divisions[ir.lvalue] = divisions[ir.rvalue]
+            if (
+                isinstance(ir, Assignment)
+                and not isinstance(ir.rvalue, Constant)
+                and ir.rvalue in divisions
+            ):
+                # Avoid dupplicate. We dont use set so we keep the order of the nodes
+                if node not in divisions[ir.rvalue]:
+                    divisions[ir.lvalue] = divisions[ir.rvalue] + [node]
+                else:
+                    divisions[ir.lvalue] = divisions[ir.rvalue]
 
             if is_division(ir):
                 divisions[ir.lvalue] = [node]
@@ -93,12 +94,8 @@ def _explore(to_explore, f_results, divisions):  # pylint: disable=too-many-bran
             if isinstance(ir, Binary) and ir.type == BinaryType.EQUAL:
                 equality_found = True
 
-        if node_results:
-            # We do not track the case where the multiplication is done in a require() or assert()
-            # Which also contains a ==, to prevent FP due to the form
-            # assert(a == b * c + a % b)
-            if not (is_assert(node) and equality_found):
-                f_results.append(node_results)
+        if node_results and not (is_assert(node) and equality_found):
+            f_results.append(node_results)
 
         for son in node.sons:
             to_explore.add(son)
@@ -132,9 +129,7 @@ def detect_divide_before_multiply(contract):
 
         _explore({function.entry_point}, f_results, divisions)
 
-        for f_result in f_results:
-            results.append((function, f_result))
-
+        results.extend((function, f_result) for f_result in f_results)
     # Return the resulting set of nodes with divisions before multiplications
     return results
 
@@ -176,8 +171,9 @@ In general, it's usually a good idea to re-arrange arithmetic to perform multipl
         """
         results = []
         for contract in self.contracts:
-            divisions_before_multiplications = detect_divide_before_multiply(contract)
-            if divisions_before_multiplications:
+            if divisions_before_multiplications := detect_divide_before_multiply(
+                contract
+            ):
                 for (func, nodes) in divisions_before_multiplications:
 
                     info = [

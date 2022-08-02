@@ -9,12 +9,14 @@ from slither.core.expressions.unary_operation import UnaryOperationType, UnaryOp
 
 class InvalidUnaryExpressionDetector(ExpressionVisitor):
     def _post_assignement_operation(self, expression):
-        if isinstance(expression.expression_right, UnaryOperation):
-            if expression.expression_right.type == UnaryOperationType.PLUS_PRE:
-                # This is defined in ExpressionVisitor but pylint
-                # Seems to think its not
-                # pylint: disable=attribute-defined-outside-init
-                self._result = True
+        if (
+            isinstance(expression.expression_right, UnaryOperation)
+            and expression.expression_right.type == UnaryOperationType.PLUS_PRE
+        ):
+            # This is defined in ExpressionVisitor but pylint
+            # Seems to think its not
+            # pylint: disable=attribute-defined-outside-init
+            self._result = True
 
 
 class InvalidUnaryStateVariableDetector(ExpressionVisitor):

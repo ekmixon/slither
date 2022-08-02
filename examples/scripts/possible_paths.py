@@ -85,7 +85,7 @@ def all_function_definitions(function):
 
 
 def __find_target_paths(target_function, current_path=None):
-    current_path = current_path if current_path else []
+    current_path = current_path or []
     # Create our results list
     results = set()
 
@@ -110,8 +110,9 @@ def __find_target_paths(target_function, current_path=None):
 
             # If any of our target functions are reachable from this function, it's a result.
             if all_target_functions.intersection(called_functions):
-                path_results = __find_target_paths(function, current_path.copy())
-                if path_results:
+                if path_results := __find_target_paths(
+                    function, current_path.copy()
+                ):
                     results = results.union(path_results)
 
     # If this path is external accessible from this point, we add the current path to the list.

@@ -24,12 +24,11 @@ class PrinterWrittenVariablesAndAuthorization(AbstractPrinter):
         all_conditional_nodes = [
             n for n in all_nodes if n.contains_if() or n.contains_require_or_assert()
         ]
-        all_conditional_nodes_on_msg_sender = [
+        return [
             str(n.expression)
             for n in all_conditional_nodes
             if "msg.sender" in [v.name for v in n.solidity_variables_read]
         ]
-        return all_conditional_nodes_on_msg_sender
 
     def output(self, _filename):
         """

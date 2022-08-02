@@ -38,21 +38,20 @@ def detect_array_length_assignment(contract):
                         #                            if ir.variable_right == "length":
                         array_length_refs.add(ir.lvalue)
 
-                    # If we have an assignment/binary operation, verify the left side refers to a reference variable
-                    # which is in our list or array length references. (Array length is being assigned to).
                     elif isinstance(ir, (Assignment, Binary)):
-                        if isinstance(ir.lvalue, ReferenceVariable):
-                            if ir.lvalue in array_length_refs and any(
-                                is_tainted(v, contract) for v in ir.read
-                            ):
-                                # the taint is not precise enough yet
-                                # as a result, REF_0 = REF_0 + 1
-                                # where REF_0 points to a LENGTH operation
-                                # is considered as tainted
-                                if ir.lvalue in ir.read:
-                                    continue
-                                results.add(node)
-                                break
+                        if (
+                            isinstance(ir.lvalue, ReferenceVariable)
+                            and ir.lvalue in array_length_refs
+                            and any(is_tainted(v, contract) for v in ir.read)
+                        ):
+                            # the taint is not precise enough yet
+                            # as a result, REF_0 = REF_0 + 1
+                            # where REF_0 points to a LENGTH operation
+                            # is considered as tainted
+                            if ir.lvalue in ir.read:
+                                continue
+                            results.add(node)
+                            break
 
     # Return the resulting set of nodes which set array length.
     return results
@@ -112,8 +111,9 @@ Otherwise, thoroughly review the contract to ensure a user-controlled variable c
         if self.compilation_unit.solc_version >= "0.6.":
             return results
         for contract in self.contracts:
-            array_length_assignments = detect_array_length_assignment(contract)
-            if array_length_assignments:
+            if array_length_assignments := detect_array_length_assignment(
+                contract
+            ):
                 contract_info = [
                     contract,
                     " contract sets array length with a user-controlled value:\n",

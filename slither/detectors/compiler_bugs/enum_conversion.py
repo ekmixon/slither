@@ -14,9 +14,7 @@ def _uses_vulnerable_solc_version(version):
     Returns:
        Bool
     """
-    if version in ["0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4"]:
-        return True
-    return False
+    return version in ["0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4"]
 
 
 def _detect_dangerous_enum_conversions(contract):

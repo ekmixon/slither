@@ -59,7 +59,7 @@ Only report reentrancy that acts as a double call (see `reentrancy-eth`, `reentr
                     if self.KEY not in node.context:
                         continue
                     if node.context[self.KEY].calls:
-                        if not any(n != node for n in node.context[self.KEY].calls):
+                        if all(n == node for n in node.context[self.KEY].calls):
                             continue
                         read_then_written = []
                         for c in node.context[self.KEY].calls:
@@ -68,16 +68,17 @@ Only report reentrancy that acts as a double call (see `reentrancy-eth`, `reentr
                                 for v in node.context[self.KEY].written
                                 if v in node.context[self.KEY].reads_prior_calls[c]
                             ]
-                        not_read_then_written = {
+                        if not_read_then_written := {
                             FindingValue(
                                 v,
                                 node,
                                 tuple(sorted(nodes, key=lambda x: x.node_id)),
                             )
-                            for (v, nodes) in node.context[self.KEY].written.items()
+                            for (v, nodes) in node.context[
+                                self.KEY
+                            ].written.items()
                             if v not in read_then_written
-                        }
-                        if not_read_then_written:
+                        }:
                             # calls are ordered
                             finding_key = FindingKey(
                                 function=node.function,

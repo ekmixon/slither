@@ -141,23 +141,16 @@ class HighLevelCall(Call, OperationWithLValue):
     ###################################################################################
 
     def __str__(self):
-        value = ""
-        gas = ""
-        if self.call_value:
-            value = "value:{}".format(self.call_value)
-        if self.call_gas:
-            gas = "gas:{}".format(self.call_gas)
-        arguments = []
-        if self.arguments:
-            arguments = self.arguments
-
+        value = f"value:{self.call_value}" if self.call_value else ""
+        gas = f"gas:{self.call_gas}" if self.call_gas else ""
+        arguments = self.arguments or []
         txt = "{}HIGH_LEVEL_CALL, dest:{}({}), function:{}, arguments:{} {} {}"
         if not self.lvalue:
             lvalue = ""
         elif isinstance(self.lvalue.type, (list,)):
-            lvalue = "{}({}) = ".format(self.lvalue, ",".join(str(x) for x in self.lvalue.type))
+            lvalue = f'{self.lvalue}({",".join((str(x) for x in self.lvalue.type))}) = '
         else:
-            lvalue = "{}({}) = ".format(self.lvalue, self.lvalue.type)
+            lvalue = f"{self.lvalue}({self.lvalue.type}) = "
         return txt.format(
             lvalue,
             self.destination,

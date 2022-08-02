@@ -77,10 +77,11 @@ contract Token{
             return True
 
         # ERC165 (dependency)
-        if name == "supportsInterface" and parameters == ["bytes4"] and returnVars != ["bool"]:
-            return True
-
-        return False
+        return (
+            name == "supportsInterface"
+            and parameters == ["bytes4"]
+            and returnVars != ["bool"]
+        )
 
     @staticmethod
     def detect_incorrect_erc721_interface(contract):
@@ -110,8 +111,9 @@ contract Token{
         """
         results = []
         for c in self.compilation_unit.contracts_derived:
-            functions = IncorrectERC721InterfaceDetection.detect_incorrect_erc721_interface(c)
-            if functions:
+            if functions := IncorrectERC721InterfaceDetection.detect_incorrect_erc721_interface(
+                c
+            ):
                 for function in functions:
                     info = [
                         c,

@@ -15,10 +15,11 @@ def _find_missing_inheritance(compilation_unit: SlitherCompilationUnit):
 
     ret = []
     for b in missings:
-        is_most_base = True
-        for inheritance in b.immediate_inheritance:
-            if inheritance in missings:
-                is_most_base = False
+        is_most_base = all(
+            inheritance not in missings
+            for inheritance in b.immediate_inheritance
+        )
+
         if is_most_base:
             ret.append(b)
 

@@ -83,12 +83,13 @@ contract ContractWithDeprecatedReferences {
         export_values = export.result()
 
         # Define our results list
-        results = []
+        results = [
+            dep_var
+            for dep_var in self.DEPRECATED_SOLIDITY_VARIABLE
+            if SolidityVariableComposed(dep_var[0]) in export_values
+        ]
 
-        # Check if there is usage of any deprecated solidity variables or functions
-        for dep_var in self.DEPRECATED_SOLIDITY_VARIABLE:
-            if SolidityVariableComposed(dep_var[0]) in export_values:
-                results.append(dep_var)
+
         for dep_func in self.DEPRECATED_SOLIDITY_FUNCTIONS:
             if SolidityFunction(dep_func[0]) in export_values:
                 results.append(dep_func)
@@ -123,10 +124,9 @@ contract ContractWithDeprecatedReferences {
 
         for state_variable in contract.state_variables_declared:
             if state_variable.expression:
-                deprecated_results = self.detect_deprecation_in_expression(
+                if deprecated_results := self.detect_deprecation_in_expression(
                     state_variable.expression
-                )
-                if deprecated_results:
+                ):
                     results.append((state_variable, deprecated_results))
 
         # Loop through all functions + modifiers in this contract.
@@ -160,8 +160,9 @@ contract ContractWithDeprecatedReferences {
         """
         results = []
         for contract in self.contracts:
-            deprecated_references = self.detect_deprecated_references_in_contract(contract)
-            if deprecated_references:
+            if deprecated_references := self.detect_deprecated_references_in_contract(
+                contract
+            ):
                 for deprecated_reference in deprecated_references:
                     source_object = deprecated_reference[0]
                     deprecated_entries = deprecated_reference[1]

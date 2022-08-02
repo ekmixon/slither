@@ -76,7 +76,10 @@ def transform_slithir_vars_to_ssa(function):
     variables = []
     for node in function.nodes:
         for ir in node.irs_ssa:
-            if isinstance(ir, OperationWithLValue) and not ir.lvalue in variables:
+            if (
+                isinstance(ir, OperationWithLValue)
+                and ir.lvalue not in variables
+            ):
                 variables += [ir.lvalue]
 
     tmp_variables = [v for v in variables if isinstance(v, TemporaryVariable)]
@@ -110,7 +113,7 @@ def add_ssa_ir(function, all_state_variables_instances):
     if not function.is_implemented:
         return
 
-    init_definition = dict()
+    init_definition = {}
     for v in function.parameters:
         if v.name:
             init_definition[v.name] = (v, function.entry_point)
@@ -128,7 +131,7 @@ def add_ssa_ir(function, all_state_variables_instances):
             # rvalues are fixed in solc_parsing.declaration.function
             function.entry_point.add_ssa_ir(Phi(StateIRVariable(variable_instance), set()))
 
-    add_phi_origins(function.entry_point, init_definition, dict())
+    add_phi_origins(function.entry_point, init_definition, {})
 
     for node in function.nodes:
         for (variable, nodes) in node.phi_origins_local_variables.values():
@@ -144,14 +147,14 @@ def add_ssa_ir(function, all_state_variables_instances):
             #    continue
             node.add_ssa_ir(Phi(StateIRVariable(variable), nodes))
 
-    init_local_variables_instances = dict()
+    init_local_variables_instances = {}
     for v in function.parameters:
         if v.name:
             new_var = LocalIRVariable(v)
             function.add_parameter_ssa(new_var)
             if new_var.is_storage:
                 fake_variable = LocalIRVariable(v)
-                fake_variable.name = "STORAGE_" + fake_variable.name
+                fake_variable.name = f"STORAGE_{fake_variable.name}"
                 fake_variable.set_location("reference_to_storage")
                 new_var.refers_to = {fake_variable}
                 init_local_variables_instances[fake_variable.name] = fake_variable
@@ -163,7 +166,7 @@ def add_ssa_ir(function, all_state_variables_instances):
             function.add_return_ssa(new_var)
             if new_var.is_storage:
                 fake_variable = LocalIRVariable(v)
-                fake_variable.name = "STORAGE_" + fake_variable.name
+                fake_variable.name = f"STORAGE_{fake_variable.name}"
                 fake_variable.set_location("reference_to_storage")
                 new_var.refers_to = {fake_variable}
                 init_local_variables_instances[fake_variable.name] = fake_variable
@@ -213,7 +216,7 @@ def generate_ssa_irs(
         return
 
     if node.type in [NodeType.ENDIF, NodeType.ENDLOOP] and any(
-        not father in visited for father in node.fathers
+        father not in visited for father in node.fathers
     ):
         return
 
@@ -233,9 +236,9 @@ def generate_ssa_irs(
 
     # these variables are lived only during the liveness of the block
     # They dont need phi function
-    temporary_variables_instances = dict()
-    reference_variables_instances = dict()
-    tuple_variables_instances = dict()
+    temporary_variables_instances = {}
+    reference_variables_instances = {}
+    tuple_variables_instances = {}
 
     for ir in node.irs:
         new_ir = copy_ir(
@@ -278,14 +281,16 @@ def generate_ssa_irs(
                     # rvalues are fixed in solc_parsing.declaration.function
                     node.add_ssa_ir(phi_ir)
 
-            if isinstance(new_ir, (Assignment, Binary)):
-                if isinstance(new_ir.lvalue, LocalIRVariable):
-                    if new_ir.lvalue.is_storage:
-                        if isinstance(new_ir.rvalue, ReferenceVariable):
-                            refers_to = new_ir.rvalue.points_to_origin
-                            new_ir.lvalue.add_refers_to(refers_to)
-                        else:
-                            new_ir.lvalue.add_refers_to(new_ir.rvalue)
+            if (
+                isinstance(new_ir, (Assignment, Binary))
+                and isinstance(new_ir.lvalue, LocalIRVariable)
+                and new_ir.lvalue.is_storage
+            ):
+                if isinstance(new_ir.rvalue, ReferenceVariable):
+                    refers_to = new_ir.rvalue.points_to_origin
+                    new_ir.lvalue.add_refers_to(refers_to)
+                else:
+                    new_ir.lvalue.add_refers_to(new_ir.rvalue)
 
     for succ in node.dominator_successors:
         generate_ssa_irs(
@@ -330,9 +335,8 @@ def last_name(n, var, init_vars):
                 candidates.append(lvalue)
     if n.variable_declaration and n.variable_declaration.name == var.name:
         candidates.append(LocalIRVariable(n.variable_declaration))
-    if n.type == NodeType.ENTRYPOINT:
-        if var.name in init_vars:
-            candidates.append(init_vars[var.name])
+    if n.type == NodeType.ENTRYPOINT and var.name in init_vars:
+        candidates.append(init_vars[var.name])
     assert candidates
     return max(candidates, key=lambda v: v.index)
 
@@ -369,7 +373,7 @@ def is_used_later(initial_node, variable):
             ):
                 return False
         for son in node.sons:
-            if not son in explored:
+            if son not in explored:
                 to_explore.add(son)
 
     return False
@@ -391,36 +395,38 @@ def update_lvalue(
     state_variables_instances,
     all_state_variables_instances,
 ):
-    if isinstance(new_ir, OperationWithLValue):
-        lvalue = new_ir.lvalue
-        update_through_ref = False
-        if isinstance(new_ir, (Assignment, Binary)):
-            if isinstance(lvalue, ReferenceVariable):
-                update_through_ref = True
-                while isinstance(lvalue, ReferenceVariable):
-                    lvalue = lvalue.points_to
-        if isinstance(lvalue, (LocalIRVariable, StateIRVariable)):
-            if isinstance(lvalue, LocalIRVariable):
-                new_var = LocalIRVariable(lvalue)
-                new_var.index = all_local_variables_instances[lvalue.name].index + 1
-                all_local_variables_instances[lvalue.name] = new_var
-                local_variables_instances[lvalue.name] = new_var
-            else:
-                new_var = StateIRVariable(lvalue)
-                new_var.index = all_state_variables_instances[lvalue.canonical_name].index + 1
-                all_state_variables_instances[lvalue.canonical_name] = new_var
-                state_variables_instances[lvalue.canonical_name] = new_var
-            if update_through_ref:
-                phi_operation = Phi(new_var, {node})
-                phi_operation.rvalues = [lvalue]
-                node.add_ssa_ir(phi_operation)
-            if not isinstance(new_ir.lvalue, ReferenceVariable):
-                new_ir.lvalue = new_var
-            else:
-                to_update = new_ir.lvalue
-                while isinstance(to_update.points_to, ReferenceVariable):
-                    to_update = to_update.points_to
-                to_update.points_to = new_var
+    if not isinstance(new_ir, OperationWithLValue):
+        return
+    lvalue = new_ir.lvalue
+    update_through_ref = False
+    if isinstance(new_ir, (Assignment, Binary)) and isinstance(
+        lvalue, ReferenceVariable
+    ):
+        update_through_ref = True
+        while isinstance(lvalue, ReferenceVariable):
+            lvalue = lvalue.points_to
+    if isinstance(lvalue, (LocalIRVariable, StateIRVariable)):
+        if isinstance(lvalue, LocalIRVariable):
+            new_var = LocalIRVariable(lvalue)
+            new_var.index = all_local_variables_instances[lvalue.name].index + 1
+            all_local_variables_instances[lvalue.name] = new_var
+            local_variables_instances[lvalue.name] = new_var
+        else:
+            new_var = StateIRVariable(lvalue)
+            new_var.index = all_state_variables_instances[lvalue.canonical_name].index + 1
+            all_state_variables_instances[lvalue.canonical_name] = new_var
+            state_variables_instances[lvalue.canonical_name] = new_var
+        if update_through_ref:
+            phi_operation = Phi(new_var, {node})
+            phi_operation.rvalues = [lvalue]
+            node.add_ssa_ir(phi_operation)
+        if not isinstance(new_ir.lvalue, ReferenceVariable):
+            new_ir.lvalue = new_var
+        else:
+            to_update = new_ir.lvalue
+            while isinstance(to_update.points_to, ReferenceVariable):
+                to_update = to_update.points_to
+            to_update.points_to = new_var
 
 
 # endregion
@@ -465,31 +471,33 @@ def fix_phi_rvalues_and_storage_ref(
                 last_name(dst, ir.lvalue, init_local_variables_instances) for dst in ir.nodes
             ]
             ir.rvalues = variables
-        if isinstance(ir, (Phi, PhiCallback)):
-            if isinstance(ir.lvalue, LocalIRVariable):
-                if ir.lvalue.is_storage:
-                    l = [v.refers_to for v in ir.rvalues]
-                    l = [item for sublist in l for item in sublist]
-                    ir.lvalue.refers_to = set(l)
+        if (
+            isinstance(ir, (Phi, PhiCallback))
+            and isinstance(ir.lvalue, LocalIRVariable)
+            and ir.lvalue.is_storage
+        ):
+            l = [v.refers_to for v in ir.rvalues]
+            l = [item for sublist in l for item in sublist]
+            ir.lvalue.refers_to = set(l)
 
-        if isinstance(ir, (Assignment, Binary)):
-            if isinstance(ir.lvalue, ReferenceVariable):
-                origin = ir.lvalue.points_to_origin
+        if isinstance(ir, (Assignment, Binary)) and isinstance(
+            ir.lvalue, ReferenceVariable
+        ):
+            origin = ir.lvalue.points_to_origin
 
-                if isinstance(origin, LocalIRVariable):
-                    if origin.is_storage:
-                        for refers_to in origin.refers_to:
-                            phi_ir = Phi(refers_to, {node})
-                            phi_ir.rvalues = [origin]
-                            node.add_ssa_ir(phi_ir)
-                            update_lvalue(
-                                phi_ir,
-                                node,
-                                local_variables_instances,
-                                all_local_variables_instances,
-                                state_variables_instances,
-                                all_state_variables_instances,
-                            )
+            if isinstance(origin, LocalIRVariable) and origin.is_storage:
+                for refers_to in origin.refers_to:
+                    phi_ir = Phi(refers_to, {node})
+                    phi_ir.rvalues = [origin]
+                    node.add_ssa_ir(phi_ir)
+                    update_lvalue(
+                        phi_ir,
+                        node,
+                        local_variables_instances,
+                        all_local_variables_instances,
+                        state_variables_instances,
+                        all_state_variables_instances,
+                    )
     for succ in node.dominator_successors:
         fix_phi_rvalues_and_storage_ref(
             succ,
@@ -520,7 +528,7 @@ def add_phi_origins(node, local_variables_definition, state_variables_definition
     # For unini variable declaration
     if (
         node.variable_declaration
-        and not node.variable_declaration.name in local_variables_definition
+        and node.variable_declaration.name not in local_variables_definition
     ):
         local_variables_definition[node.variable_declaration.name] = (
             node.variable_declaration,
@@ -573,7 +581,7 @@ def get(
     if isinstance(variable, StateVariable) and variable.canonical_name in state_variables_instances:
         return state_variables_instances[variable.canonical_name]
     if isinstance(variable, ReferenceVariable):
-        if not variable.index in reference_variables_instances:
+        if variable.index not in reference_variables_instances:
             new_variable = ReferenceVariableSSA(variable)
             if variable.points_to:
                 new_variable.points_to = get(
@@ -589,13 +597,13 @@ def get(
             reference_variables_instances[variable.index] = new_variable
         return reference_variables_instances[variable.index]
     if isinstance(variable, TemporaryVariable):
-        if not variable.index in temporary_variables_instances:
+        if variable.index not in temporary_variables_instances:
             new_variable = TemporaryVariableSSA(variable)
             new_variable.set_type(variable.type)
             temporary_variables_instances[variable.index] = new_variable
         return temporary_variables_instances[variable.index]
     if isinstance(variable, TupleVariable):
-        if not variable.index in tuple_variables_instances:
+        if variable.index not in tuple_variables_instances:
             new_variable = TupleVariableSSA(variable)
             new_variable.set_type(variable.type)
             tuple_variables_instances[variable.index] = new_variable

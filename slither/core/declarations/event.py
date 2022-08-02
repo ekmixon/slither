@@ -37,7 +37,7 @@ class Event(ChildContract, SourceMapping):
             str: func_name(type1,type2)
         """
         name, parameters = self.signature
-        return name + "(" + ",".join(parameters) + ")"
+        return f"{name}(" + ",".join(parameters) + ")"
 
     @property
     def canonical_name(self) -> str:

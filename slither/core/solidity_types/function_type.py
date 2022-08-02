@@ -36,10 +36,9 @@ class FunctionType(Type):
         # Use x.type
         # x.name may be empty
         params = ",".join([str(x.type) for x in self._params])
-        return_values = ",".join([str(x.type) for x in self._return_values])
-        if return_values:
-            return "function({}) returns({})".format(params, return_values)
-        return "function({})".format(params)
+        if return_values := ",".join([str(x.type) for x in self._return_values]):
+            return f"function({params}) returns({return_values})"
+        return f"function({params})"
 
     @property
     def parameters_signature(self) -> str:
@@ -49,7 +48,7 @@ class FunctionType(Type):
         # Use x.type
         # x.name may be empty
         params = ",".join([str(x.type) for x in self._params])
-        return "({})".format(params)
+        return f"({params})"
 
     @property
     def signature(self) -> str:
@@ -59,15 +58,17 @@ class FunctionType(Type):
         # Use x.type
         # x.name may be empty
         params = ",".join([str(x.type) for x in self._params])
-        return_values = ",".join([str(x.type) for x in self._return_values])
-        if return_values:
-            return "({}) returns({})".format(params, return_values)
-        return "({})".format(params)
+        if return_values := ",".join([str(x.type) for x in self._return_values]):
+            return f"({params}) returns({return_values})"
+        return f"({params})"
 
     def __eq__(self, other):
-        if not isinstance(other, FunctionType):
-            return False
-        return self.params == other.params and self.return_values == other.return_values
+        return (
+            self.params == other.params
+            and self.return_values == other.return_values
+            if isinstance(other, FunctionType)
+            else False
+        )
 
     def __hash__(self):
         return hash(str(self))

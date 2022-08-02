@@ -34,7 +34,7 @@ class StructureContractSolc:  # pylint: disable=too-few-public-methods
         if "canonicalName" in attributes:
             canonicalName = attributes["canonicalName"]
         else:
-            canonicalName = contract_parser.underlying_contract.name + "." + name
+            canonicalName = f"{contract_parser.underlying_contract.name}.{name}"
 
         children = struct["members"] if "members" in struct else struct.get("children", [])
 

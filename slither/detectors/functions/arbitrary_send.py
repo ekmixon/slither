@@ -40,9 +40,12 @@ def arbitrary_send(func: Function):
     ret: List[Node] = []
     for node in func.nodes:
         for ir in node.irs:
-            if isinstance(ir, SolidityCall):
-                if ir.function == SolidityFunction("ecrecover(bytes32,uint8,bytes32,bytes32)"):
-                    return False
+            if isinstance(
+                ir, SolidityCall
+            ) and ir.function == SolidityFunction(
+                "ecrecover(bytes32,uint8,bytes32,bytes32)"
+            ):
+                return False
             if isinstance(ir, Index):
                 if ir.variable_right == SolidityVariableComposed("msg.sender"):
                     return False
@@ -53,10 +56,13 @@ def arbitrary_send(func: Function):
                 ):
                     return False
             if isinstance(ir, (HighLevelCall, LowLevelCall, Transfer, Send)):
-                if isinstance(ir, (HighLevelCall)):
-                    if isinstance(ir.function, Function):
-                        if ir.function.full_name == "transferFrom(address,address,uint256)":
-                            return False
+                if (
+                    isinstance(ir, (HighLevelCall))
+                    and isinstance(ir.function, Function)
+                    and ir.function.full_name
+                    == "transferFrom(address,address,uint256)"
+                ):
+                    return False
                 if ir.call_value is None:
                     continue
                 if ir.call_value == SolidityVariableComposed("msg.value"):
@@ -84,8 +90,7 @@ def detect_arbitrary_send(contract: Contract):
     """
     ret = []
     for f in [f for f in contract.functions if f.contract_declarer == contract]:
-        nodes = arbitrary_send(f)
-        if nodes:
+        if nodes := arbitrary_send(f):
             ret.append((f, nodes))
     return ret
 

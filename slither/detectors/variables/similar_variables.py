@@ -40,8 +40,7 @@ class SimilarVarsDetection(AbstractDetector):
         if len(seq1) != len(seq2):
             return False
         val = difflib.SequenceMatcher(a=seq1.lower(), b=seq2.lower()).ratio()
-        ret = val > 0.90
-        return ret
+        return val > 0.90
 
     @staticmethod
     def detect_sim(contract):
@@ -60,10 +59,12 @@ class SimilarVarsDetection(AbstractDetector):
         ret = []
         for v1 in all_var:
             for v2 in all_var:
-                if v1.name.lower() != v2.name.lower():
-                    if SimilarVarsDetection.similar(v1.name, v2.name):
-                        if (v2, v1) not in ret:
-                            ret.append((v1, v2))
+                if (
+                    v1.name.lower() != v2.name.lower()
+                    and SimilarVarsDetection.similar(v1.name, v2.name)
+                    and (v2, v1) not in ret
+                ):
+                    ret.append((v1, v2))
 
         return set(ret)
 
@@ -75,8 +76,7 @@ class SimilarVarsDetection(AbstractDetector):
         """
         results = []
         for c in self.contracts:
-            allVars = self.detect_sim(c)
-            if allVars:
+            if allVars := self.detect_sim(c):
                 for (v1, v2) in sorted(allVars, key=lambda x: (x[0].name, x[1].name)):
                     v_left = v1 if v1.name < v2.name else v2
                     v_right = v2 if v_left == v1 else v1

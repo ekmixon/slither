@@ -74,9 +74,8 @@ def _render_external_calls(external_calls):
 
 
 def _render_internal_calls(contract, contract_functions, contract_calls):
-    lines = []
+    lines = [f"subgraph {_contract_subgraph(contract)} {{"]
 
-    lines.append(f"subgraph {_contract_subgraph(contract)} {{")
     lines.append(f'label = "{contract.name}"')
 
     lines.extend(contract_functions[contract])
@@ -88,10 +87,7 @@ def _render_internal_calls(contract, contract_functions, contract_calls):
 
 
 def _render_solidity_calls(solidity_functions, solidity_calls):
-    lines = []
-
-    lines.append("subgraph cluster_solidity {")
-    lines.append('label = "[Solidity]"')
+    lines = ["subgraph cluster_solidity {", 'label = "[Solidity]"']
 
     lines.extend(solidity_functions)
     lines.extend(solidity_calls)
@@ -111,7 +107,7 @@ def _process_external_call(
 ):
     external_contract, external_function = external_call
 
-    if not external_contract in all_contracts:
+    if external_contract not in all_contracts:
         return
 
     # add variable as node to respective contract
@@ -174,10 +170,8 @@ def _process_functions(functions):
     solidity_calls = set()  # solidity calls edges
     external_calls = set()  # external calls edges
 
-    all_contracts = set()
+    all_contracts = {function.contract_declarer for function in functions}
 
-    for function in functions:
-        all_contracts.add(function.contract_declarer)
     for function in functions:
         _process_function(
             function.contract_declarer,
@@ -190,11 +184,10 @@ def _process_functions(functions):
             all_contracts,
         )
 
-    render_internal_calls = ""
-    for contract in all_contracts:
-        render_internal_calls += _render_internal_calls(
-            contract, contract_functions, contract_calls
-        )
+    render_internal_calls = "".join(
+        _render_internal_calls(contract, contract_functions, contract_calls)
+        for contract in all_contracts
+    )
 
     render_solidity_calls = _render_solidity_calls(solidity_functions, solidity_calls)
 

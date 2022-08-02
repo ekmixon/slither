@@ -315,12 +315,10 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
         executed, following the c3 linearization
         Return None if there is no constructor.
         """
-        cst = self.constructors_declared
-        if cst:
+        if cst := self.constructors_declared:
             return cst
         for inherited_contract in self.inheritance:
-            cst = inherited_contract.constructors_declared
-            if cst:
+            if cst := inherited_contract.constructors_declared:
                 return cst
         return None
 
@@ -518,7 +516,6 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
         # to prevent an ovveride due to multiple inheritance of the same contract
         # A is B, C, D is C, --> the second C was already seen
         inherited_elements: Dict[str, "Function"] = {}
-        accessible_elements = {}
         contracts_visited = []
         for father in self.inheritance_reverse:
             functions: Dict[str, "Function"] = {
@@ -527,12 +524,12 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
                 if v.contract not in contracts_visited
             }
             contracts_visited.append(father)
-            inherited_elements.update(functions)
+            inherited_elements |= functions
 
-        for element in inherited_elements.values():
-            accessible_elements[element.full_name] = elements[element.canonical_name]
-
-        return accessible_elements
+        return {
+            element.full_name: elements[element.canonical_name]
+            for element in inherited_elements.values()
+        }
 
     # endregion
     ###################################################################################
@@ -1015,11 +1012,14 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
         Return true if the contract is the Migrations contract needed for Truffle
         :return:
         """
-        if self.compilation_unit.core.crytic_compile.platform == PlatformType.TRUFFLE:
-            if self.name == "Migrations":
-                paths = Path(self.source_mapping["filename_absolute"]).parts
-                if len(paths) >= 2:
-                    return paths[-2] == "contracts" and paths[-1] == "migrations.sol"
+        if (
+            self.compilation_unit.core.crytic_compile.platform
+            == PlatformType.TRUFFLE
+            and self.name == "Migrations"
+        ):
+            paths = Path(self.source_mapping["filename_absolute"]).parts
+            if len(paths) >= 2:
+                return paths[-2] == "contracts" and paths[-1] == "migrations.sol"
         return False
 
     @property
@@ -1050,8 +1050,9 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
             self._is_upgradeable = False
             if self.is_upgradeable_proxy:
                 return False
-            initializable = self.compilation_unit.get_contract_from_name("Initializable")
-            if initializable:
+            if initializable := self.compilation_unit.get_contract_from_name(
+                "Initializable"
+            ):
                 if initializable in self.inheritance:
                     self._is_upgradeable = True
             else:
@@ -1083,12 +1084,13 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
                             if isinstance(ir, LowLevelCall) and ir.function_name == "delegatecall":
                                 self._is_upgradeable_proxy = True
                                 return self._is_upgradeable_proxy
-                        if node.type == NodeType.ASSEMBLY:
-                            inline_asm = node.inline_asm
-                            if inline_asm:
-                                if "delegatecall" in inline_asm:
-                                    self._is_upgradeable_proxy = True
-                                    return self._is_upgradeable_proxy
+                        if inline_asm := node.inline_asm:
+                            if (
+                                node.type == NodeType.ASSEMBLY
+                                and "delegatecall" in inline_asm
+                            ):
+                                self._is_upgradeable_proxy = True
+                                return self._is_upgradeable_proxy
         return self._is_upgradeable_proxy
 
     # endregion
@@ -1219,7 +1221,7 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
         """
         from slither.slithir.variables import StateIRVariable
 
-        all_ssa_state_variables_instances = dict()
+        all_ssa_state_variables_instances = {}
 
         for contract in self.inheritance:
             for v in contract.state_variables_declared:
@@ -1237,8 +1239,8 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
             func.generate_slithir_ssa(all_ssa_state_variables_instances)
 
     def fix_phi(self):
-        last_state_variables_instances = dict()
-        initial_state_variables_instances = dict()
+        last_state_variables_instances = {}
+        initial_state_variables_instances = {}
         for v in self._initial_state_variables:
             last_state_variables_instances[v.canonical_name] = []
             initial_state_variables_instances[v.canonical_name] = v
@@ -1259,14 +1261,10 @@ class Contract(SourceMapping):  # pylint: disable=too-many-public-methods
     ###################################################################################
 
     def __eq__(self, other):
-        if isinstance(other, str):
-            return other == self.name
-        return NotImplemented
+        return other == self.name if isinstance(other, str) else NotImplemented
 
     def __neq__(self, other):
-        if isinstance(other, str):
-            return other != self.name
-        return NotImplemented
+        return other != self.name if isinstance(other, str) else NotImplemented
 
     def __str__(self):
         return self.name

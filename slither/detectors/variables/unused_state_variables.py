@@ -58,8 +58,7 @@ class UnusedStateVars(AbstractDetector):
         """Detect unused state variables"""
         results = []
         for c in self.compilation_unit.contracts_derived:
-            unusedVars = detect_unused(c)
-            if unusedVars:
+            if unusedVars := detect_unused(c):
                 for var in unusedVars:
                     info = [var, " is never used in ", c, "\n"]
                     json = self.generate_result(info)

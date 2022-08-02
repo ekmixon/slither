@@ -31,7 +31,11 @@ class ConstCandidateStateVars(AbstractDetector):
 
     @staticmethod
     def _valid_candidate(v):
-        return isinstance(v.type, ElementaryType) and not (v.is_constant or v.is_immutable)
+        return (
+            isinstance(v.type, ElementaryType)
+            and not v.is_constant
+            and not v.is_immutable
+        )
 
     # https://solidity.readthedocs.io/en/v0.5.2/contracts.html#constant-state-variables
     valid_solidity_function = [
@@ -48,9 +52,7 @@ class ConstCandidateStateVars(AbstractDetector):
 
     @staticmethod
     def _is_constant_var(v):
-        if isinstance(v, StateVariable):
-            return v.is_constant
-        return False
+        return v.is_constant if isinstance(v, StateVariable) else False
 
     def _constant_initial_expression(self, v):
         if not v.expression:
@@ -58,13 +60,17 @@ class ConstCandidateStateVars(AbstractDetector):
 
         export = ExportValues(v.expression)
         values = export.result()
-        if not values:
-            return True
-        if all(
-            (val in self.valid_solidity_function or self._is_constant_var(val) for val in values)
-        ):
-            return True
-        return False
+        return (
+            all(
+                (
+                    val in self.valid_solidity_function
+                    or self._is_constant_var(val)
+                    for val in values
+                )
+            )
+            if values
+            else True
+        )
 
     def _detect(self):
         """Detect state variables that could be const"""
@@ -87,8 +93,10 @@ class ConstCandidateStateVars(AbstractDetector):
         constable_variables = [
             v
             for v in all_non_constant_elementary_variables
-            if (not v in all_variables_written) and self._constant_initial_expression(v)
+            if v not in all_variables_written
+            and self._constant_initial_expression(v)
         ]
+
         # Order for deterministic results
         constable_variables = sorted(constable_variables, key=lambda x: x.canonical_name)
 

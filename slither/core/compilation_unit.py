@@ -244,14 +244,9 @@ class SlitherCompilationUnit(Context):
 
                 size, new_slot = var.type.storage_size
 
-                if new_slot:
-                    if offset > 0:
-                        slot += 1
-                        offset = 0
-                elif size + offset > 32:
+                if new_slot and offset > 0 or not new_slot and size + offset > 32:
                     slot += 1
                     offset = 0
-
                 self._storage_layouts[contract.name][var.canonical_name] = (
                     slot,
                     offset,

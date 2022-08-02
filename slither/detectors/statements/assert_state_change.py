@@ -18,9 +18,11 @@ def detect_assert_state_change(contract):
 
     # Loop for each function and modifier.
     for function in contract.functions_declared + contract.modifiers_declared:
-        for node in function.nodes:
-            # Detect assert() calls
-            if any(c.name == "assert(bool)" for c in node.internal_calls) and (
+        results.extend(
+            (function, node)
+            for node in function.nodes
+            if any(c.name == "assert(bool)" for c in node.internal_calls)
+            and (
                 # Detect direct changes to state
                 node.state_variables_written
                 or
@@ -28,10 +30,11 @@ def detect_assert_state_change(contract):
                 any(
                     ir
                     for ir in node.irs
-                    if isinstance(ir, InternalCall) and ir.function.state_variables_written
+                    if isinstance(ir, InternalCall)
+                    and ir.function.state_variables_written
                 )
-            ):
-                results.append((function, node))
+            )
+        )
 
     # Return the resulting set of nodes
     return results

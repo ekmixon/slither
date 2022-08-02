@@ -30,13 +30,12 @@ class Constant(SlithIRVariable):
                 self._val = (val == "true") | (val == "True")
             else:
                 self._val = val
+        elif val.isdigit():
+            self._type = ElementaryType("uint256")
+            self._val = int(Decimal(val))
         else:
-            if val.isdigit():
-                self._type = ElementaryType("uint256")
-                self._val = int(Decimal(val))
-            else:
-                self._type = ElementaryType("string")
-                self._val = val
+            self._type = ElementaryType("string")
+            self._val = val
 
     @property
     def value(self):
@@ -74,4 +73,4 @@ class Constant(SlithIRVariable):
         return self.value < other
 
     def __repr__(self):
-        return "%s" % (str(self.value))
+        return f"{str(self.value)}"

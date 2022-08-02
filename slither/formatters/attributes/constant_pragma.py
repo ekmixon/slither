@@ -18,9 +18,11 @@ PATTERN = re.compile("(\^|>|>=|<|<=)?([ ]+)?(\d+)\.(\d+)\.(\d+)")
 
 def custom_format(slither, result):
     elements = result["elements"]
-    versions_used = []
-    for element in elements:
-        versions_used.append("".join(element["type_specific_fields"]["directive"][1:]))
+    versions_used = [
+        "".join(element["type_specific_fields"]["directive"][1:])
+        for element in elements
+    ]
+
     solc_version_replace = _analyse_versions(versions_used)
     for element in elements:
         _patch(
@@ -34,10 +36,15 @@ def custom_format(slither, result):
 
 
 def _analyse_versions(used_solc_versions):
-    replace_solc_versions = list()
-    for version in used_solc_versions:
-        replace_solc_versions.append(_determine_solc_version_replacement(version))
-    if not all(version == replace_solc_versions[0] for version in replace_solc_versions):
+    replace_solc_versions = [
+        _determine_solc_version_replacement(version)
+        for version in used_solc_versions
+    ]
+
+    if any(
+        version != replace_solc_versions[0]
+        for version in replace_solc_versions
+    ):
         raise FormatImpossible("Multiple incompatible versions!")
     return replace_solc_versions[0]
 
@@ -48,19 +55,19 @@ def _determine_solc_version_replacement(used_solc_version):
         version = versions[0]
         minor_version = ".".join(version[2:])[2]
         if minor_version == "4":
-            return "pragma solidity " + REPLACEMENT_VERSIONS[0] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[0]};"
         if minor_version == "5":
-            return "pragma solidity " + REPLACEMENT_VERSIONS[1] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[1]};"
         raise FormatImpossible("Unknown version!")
     if len(versions) == 2:
         version_right = versions[1]
         minor_version_right = ".".join(version_right[2:])[2]
         if minor_version_right == "4":
             # Replace with 0.4.25
-            return "pragma solidity " + REPLACEMENT_VERSIONS[0] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[0]};"
         if minor_version_right in ["5", "6"]:
             # Replace with 0.5.3
-            return "pragma solidity " + REPLACEMENT_VERSIONS[1] + ";"
+            return f"pragma solidity {REPLACEMENT_VERSIONS[1]};"
     raise FormatImpossible("Unknown version!")
 
 

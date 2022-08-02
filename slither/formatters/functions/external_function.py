@@ -7,14 +7,12 @@ from slither.formatters.utils.patches import create_patch
 def custom_format(comilation_unit: SlitherCompilationUnit, result):
     elements = result["elements"]
     for element in elements:
-        target_contract = comilation_unit.get_contract_from_name(
+        if target_contract := comilation_unit.get_contract_from_name(
             element["type_specific_fields"]["parent"]["name"]
-        )
-        if target_contract:
-            function = target_contract.get_function_from_signature(
+        ):
+            if function := target_contract.get_function_from_signature(
                 element["type_specific_fields"]["signature"]
-            )
-            if function:
+            ):
                 _patch(
                     comilation_unit,
                     result,

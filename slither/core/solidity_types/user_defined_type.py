@@ -40,14 +40,9 @@ class UserDefinedType(Type):
             offset = 0
             for elem in self._type.elems_ordered:
                 size, new_slot = elem.type.storage_size
-                if new_slot:
-                    if offset > 0:
-                        slot += 1
-                        offset = 0
-                elif size + offset > 32:
+                if new_slot and offset > 0 or not new_slot and size + offset > 32:
                     slot += 1
                     offset = 0
-
                 if new_slot:
                     slot += math.ceil(size / 32)
                 else:
@@ -64,13 +59,11 @@ class UserDefinedType(Type):
 
         type_used = self.type
         if isinstance(type_used, (EnumContract, StructureContract)):
-            return str(type_used.contract) + "." + str(type_used.name)
+            return f"{str(type_used.contract)}.{str(type_used.name)}"
         return str(type_used.name)
 
     def __eq__(self, other):
-        if not isinstance(other, UserDefinedType):
-            return False
-        return self.type == other.type
+        return self.type == other.type if isinstance(other, UserDefinedType) else False
 
     def __hash__(self):
         return hash(str(self))

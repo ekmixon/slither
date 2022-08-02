@@ -30,7 +30,7 @@ def is_subset(
     new_info: Dict[Union[Variable, Node], Set[Node]],
     old_info: Dict[Union[Variable, Node], Set[Node]],
 ):
-    for k in new_info.keys():
+    for k in new_info:
         if k not in old_info:
             return False
         if not new_info[k].issubset(old_info[k]):
@@ -39,9 +39,11 @@ def is_subset(
 
 
 def to_hashable(d: Dict[Node, Set[Node]]):
-    list_tuple = list(
-        tuple((k, tuple(sorted(values, key=lambda x: x.node_id)))) for k, values in d.items()
-    )
+    list_tuple = [
+        (k, tuple(sorted(values, key=lambda x: x.node_id)))
+        for k, values in d.items()
+    ]
+
     return tuple(sorted(list_tuple, key=lambda x: x[0].node_id))
 
 
@@ -182,12 +184,12 @@ class AbstractState:
         self._reads_prior_calls = union_dict(self._reads_prior_calls, fathers.reads_prior_calls)
 
     def does_not_bring_new_info(self, new_info):
-        if is_subset(new_info.calls, self.calls):
-            if is_subset(new_info.send_eth, self.send_eth):
-                if is_subset(new_info.reads, self.reads):
-                    if dict_are_equal(new_info.reads_prior_calls, self.reads_prior_calls):
-                        return True
-        return False
+        return bool(
+            is_subset(new_info.calls, self.calls)
+            and is_subset(new_info.send_eth, self.send_eth)
+            and is_subset(new_info.reads, self.reads)
+            and dict_are_equal(new_info.reads_prior_calls, self.reads_prior_calls)
+        )
 
 
 def _filter_if(node):

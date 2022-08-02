@@ -60,9 +60,7 @@ def process_single(target, args, detector_classes, printer_classes):
     Returns:
         list(result), int: Result list and number of contracts analyzed
     """
-    ast = "--ast-compact-json"
-    if args.legacy_ast:
-        ast = "--ast-json"
+    ast = "--ast-json" if args.legacy_ast else "--ast-compact-json"
     slither = Slither(target, ast_format=ast, **vars(args))
 
     return _process(slither, detector_classes, printer_classes)
@@ -206,7 +204,7 @@ def choose_detectors(args, all_detector_classes):
             if detector in detectors:
                 detectors_to_run.append(detectors[detector])
             else:
-                raise Exception("Error: {} is not a detector".format(detector))
+                raise Exception(f"Error: {detector} is not a detector")
         detectors_to_run = sorted(detectors_to_run, key=lambda x: x.IMPACT)
         return detectors_to_run
 
@@ -252,7 +250,7 @@ def choose_printers(args, all_printer_classes):
         if printer in printers:
             printers_to_run.append(printers[printer])
         else:
-            raise Exception("Error: {} is not a printer".format(printer))
+            raise Exception(f"Error: {printer} is not a printer")
     return printers_to_run
 
 
@@ -265,15 +263,12 @@ def choose_printers(args, all_printer_classes):
 
 
 def parse_filter_paths(args):
-    if args.filter_paths:
-        return args.filter_paths.split(",")
-    return []
+    return args.filter_paths.split(",") if args.filter_paths else []
 
 
 def parse_args(detector_classes, printer_classes):  # pylint: disable=too-many-statements
 
-    usage = "slither target [flag]\n"
-    usage += "\ntarget can be:\n"
+    usage = "slither target [flag]\n" + "\ntarget can be:\n"
     usage += "\t- file.sol // a Solidity file\n"
     usage += "\t- project_directory // a project directory. See https://github.com/crytic/crytic-compile/#crytic-compile for the supported platforms\n"
     usage += "\t- 0x.. // a contract on mainet\n"
@@ -301,21 +296,21 @@ def parse_args(detector_classes, printer_classes):  # pylint: disable=too-many-s
 
     group_detector.add_argument(
         "--detect",
-        help="Comma-separated list of detectors, defaults to all, "
-        "available detectors: {}".format(", ".join(d.ARGUMENT for d in detector_classes)),
+        help=f'Comma-separated list of detectors, defaults to all, available detectors: {", ".join((d.ARGUMENT for d in detector_classes))}',
         action="store",
         dest="detectors_to_run",
         default=defaults_flag_in_config["detectors_to_run"],
     )
 
+
     group_printer.add_argument(
         "--print",
-        help="Comma-separated list fo contract information printers, "
-        "available printers: {}".format(", ".join(d.ARGUMENT for d in printer_classes)),
+        help=f'Comma-separated list fo contract information printers, available printers: {", ".join((d.ARGUMENT for d in printer_classes))}',
         action="store",
         dest="printers_to_run",
         default=defaults_flag_in_config["printers_to_run"],
     )
+
 
     group_detector.add_argument(
         "--list-detectors",
@@ -406,12 +401,17 @@ def parse_args(detector_classes, printer_classes):  # pylint: disable=too-many-s
 
     group_misc.add_argument(
         "--json-types",
-        help="Comma-separated list of result types to output to JSON, defaults to "
-        + f'{",".join(output_type for output_type in DEFAULT_JSON_OUTPUT_TYPES)}. '
-        + f'Available types: {",".join(output_type for output_type in JSON_OUTPUT_TYPES)}',
+        help=(
+            (
+                "Comma-separated list of result types to output to JSON, defaults to "
+                + f'{",".join(DEFAULT_JSON_OUTPUT_TYPES)}. '
+            )
+            + f'Available types: {",".join(JSON_OUTPUT_TYPES)}'
+        ),
         action="store",
         default=defaults_flag_in_config["json-types"],
     )
+
 
     group_misc.add_argument(
         "--zip",
@@ -667,7 +667,7 @@ def main_impl(all_detector_classes, all_printer_classes):
     printer_classes = choose_printers(args, all_printer_classes)
     detector_classes = choose_detectors(args, all_detector_classes)
 
-    default_log = logging.INFO if not args.debug else logging.DEBUG
+    default_log = logging.DEBUG if args.debug else logging.INFO
 
     for (l_name, l_level) in [
         ("Slither", default_log),
@@ -744,11 +744,11 @@ def main_impl(all_detector_classes, all_printer_classes):
         if outputting_json or outputting_zip or output_to_sarif:
             # Add our compilation information to JSON
             if "compilations" in args.json_types:
-                compilation_results = []
-                for slither_instance in slither_instances:
-                    compilation_results.append(
-                        generate_standard_export(slither_instance.crytic_compile)
-                    )
+                compilation_results = [
+                    generate_standard_export(slither_instance.crytic_compile)
+                    for slither_instance in slither_instances
+                ]
+
                 json_results["compilations"] = compilation_results
 
             # Add our detector results to JSON if desired.

@@ -129,9 +129,7 @@ Consider using the latest version of Solidity for testing."""
             if len(p.directive) < 1 or p.directive[0] != "solidity":
                 continue
 
-            # This is version, so we test if this is disallowed.
-            reason = self._check_pragma(p.version)
-            if reason:
+            if reason := self._check_pragma(p.version):
                 disallowed_pragmas.append((reason, p))
 
         # If we found any disallowed pragmas, we output our findings.

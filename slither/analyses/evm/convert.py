@@ -106,19 +106,17 @@ def _get_evm_instructions_function(function_info):
         cfg = function_info["contract_info"]["cfg"]
         name = function.name
         # Get first four bytes of function singature's keccak-256 hash used as function selector
-        func_hash = str(hex(get_function_id(function.full_name)))
+        func_hash = hex(get_function_id(function.full_name))
 
     function_evm = _get_function_evm(cfg, name, func_hash)
     if function_evm is None:
-        to_log = "Function " + function.name + " not found in the EVM code"
+        to_log = f"Function {function.name} not found in the EVM code"
         logger.error(to_log)
-        raise SlitherError("Function " + function.name + " not found in the EVM code")
+        raise SlitherError(f"Function {function.name} not found in the EVM code")
 
     function_ins = []
     for basic_block in sorted(function_evm.basic_blocks, key=lambda x: x.start.pc):
-        for ins in basic_block.instructions:
-            function_ins.append(ins)
-
+        function_ins.extend(iter(basic_block.instructions))
     return function_ins
 
 
@@ -138,14 +136,14 @@ def _get_evm_instructions_node(node_info):
 
     # Get evm instructions corresponding to node's source line number
     node_source_line = (
-        contract_file[0 : node_info["node"].source_mapping["start"]].count("\n".encode("utf-8")) + 1
+        contract_file[: node_info["node"].source_mapping["start"]].count(
+            "\n".encode("utf-8")
+        )
+        + 1
     )
-    node_pcs = contract_pcs.get(node_source_line, [])
-    node_ins = []
-    for pc in node_pcs:
-        node_ins.append(node_info["cfg"].get_instruction_at(pc))
 
-    return node_ins
+    node_pcs = contract_pcs.get(node_source_line, [])
+    return [node_info["cfg"].get_instruction_at(pc) for pc in node_pcs]
 
 
 def _get_function_evm(cfg, function_name, function_hash):
@@ -195,7 +193,7 @@ def generate_source_to_evm_ins_mapping(evm_instructions, srcmap_runtime, slither
             continue
 
         offset = int(offset)
-        line_number = file_source[0:offset].count("\n".encode("utf-8")) + 1
+        line_number = file_source[:offset].count("\n".encode("utf-8")) + 1
 
         # Append evm instructions to the corresponding source line number
         # Note: Some evm instructions in mapping are not necessarily in program execution order

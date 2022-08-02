@@ -11,7 +11,7 @@ class Structure(SourceMapping):
         super().__init__()
         self._name = None
         self._canonical_name = None
-        self._elems: Dict[str, "StructureVariable"] = dict()
+        self._elems: Dict[str, "StructureVariable"] = {}
         # Name of the elements in the order of declaration
         self._elems_ordered: List[str] = []
 
@@ -40,10 +40,7 @@ class Structure(SourceMapping):
 
     @property
     def elems_ordered(self) -> List["StructureVariable"]:
-        ret = []
-        for e in self._elems_ordered:
-            ret.append(self._elems[e])
-        return ret
+        return [self._elems[e] for e in self._elems_ordered]
 
     def __str__(self):
         return self.name

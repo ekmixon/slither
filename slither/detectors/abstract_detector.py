@@ -72,46 +72,54 @@ class AbstractDetector(metaclass=abc.ABCMeta):
 
         if not self.HELP:
             raise IncorrectDetectorInitialization(
-                "HELP is not initialized {}".format(self.__class__.__name__)
+                f"HELP is not initialized {self.__class__.__name__}"
             )
+
 
         if not self.ARGUMENT:
             raise IncorrectDetectorInitialization(
-                "ARGUMENT is not initialized {}".format(self.__class__.__name__)
+                f"ARGUMENT is not initialized {self.__class__.__name__}"
             )
+
 
         if not self.WIKI:
             raise IncorrectDetectorInitialization(
-                "WIKI is not initialized {}".format(self.__class__.__name__)
+                f"WIKI is not initialized {self.__class__.__name__}"
             )
+
 
         if not self.WIKI_TITLE:
             raise IncorrectDetectorInitialization(
-                "WIKI_TITLE is not initialized {}".format(self.__class__.__name__)
+                f"WIKI_TITLE is not initialized {self.__class__.__name__}"
             )
+
 
         if not self.WIKI_DESCRIPTION:
             raise IncorrectDetectorInitialization(
-                "WIKI_DESCRIPTION is not initialized {}".format(self.__class__.__name__)
+                f"WIKI_DESCRIPTION is not initialized {self.__class__.__name__}"
             )
+
 
         if not self.WIKI_EXPLOIT_SCENARIO and self.IMPACT not in [
             DetectorClassification.INFORMATIONAL,
             DetectorClassification.OPTIMIZATION,
         ]:
             raise IncorrectDetectorInitialization(
-                "WIKI_EXPLOIT_SCENARIO is not initialized {}".format(self.__class__.__name__)
+                f"WIKI_EXPLOIT_SCENARIO is not initialized {self.__class__.__name__}"
             )
+
 
         if not self.WIKI_RECOMMENDATION:
             raise IncorrectDetectorInitialization(
-                "WIKI_RECOMMENDATION is not initialized {}".format(self.__class__.__name__)
+                f"WIKI_RECOMMENDATION is not initialized {self.__class__.__name__}"
             )
+
 
         if re.match("^[a-zA-Z0-9_-]*$", self.ARGUMENT) is None:
             raise IncorrectDetectorInitialization(
-                "ARGUMENT has illegal character {}".format(self.__class__.__name__)
+                f"ARGUMENT has illegal character {self.__class__.__name__}"
             )
+
 
         if self.IMPACT not in [
             DetectorClassification.LOW,
@@ -121,8 +129,9 @@ class AbstractDetector(metaclass=abc.ABCMeta):
             DetectorClassification.OPTIMIZATION,
         ]:
             raise IncorrectDetectorInitialization(
-                "IMPACT is not initialized {}".format(self.__class__.__name__)
+                f"IMPACT is not initialized {self.__class__.__name__}"
             )
+
 
         if self.CONFIDENCE not in [
             DetectorClassification.LOW,
@@ -132,7 +141,7 @@ class AbstractDetector(metaclass=abc.ABCMeta):
             DetectorClassification.OPTIMIZATION,
         ]:
             raise IncorrectDetectorInitialization(
-                "CONFIDENCE is not initialized {}".format(self.__class__.__name__)
+                f"CONFIDENCE is not initialized {self.__class__.__name__}"
             )
 
     def _log(self, info: str) -> None:
@@ -158,17 +167,17 @@ class AbstractDetector(metaclass=abc.ABCMeta):
             for result in results:
                 try:
                     self._format(self.compilation_unit, result)
-                    if not "patches" in result:
+                    if "patches" not in result:
                         continue
-                    result["patches_diff"] = dict()
+                    result["patches_diff"] = {}
                     for file in result["patches"]:
                         original_txt = self.compilation_unit.core.source_code[file].encode("utf8")
                         patched_txt = original_txt
                         offset = 0
                         patches = result["patches"][file]
                         patches.sort(key=lambda x: x["start"])
-                        if not all(
-                            patches[i]["end"] <= patches[i + 1]["end"]
+                        if any(
+                            patches[i]["end"] > patches[i + 1]["end"]
                             for i in range(len(patches) - 1)
                         ):
                             self._log(
@@ -177,22 +186,22 @@ class AbstractDetector(metaclass=abc.ABCMeta):
                             continue
                         for patch in patches:
                             patched_txt, offset = apply_patch(patched_txt, patch, offset)
-                        diff = create_diff(self.compilation_unit, original_txt, patched_txt, file)
-                        if not diff:
-                            self._log(f"Impossible to generate patch; empty {result}")
-                        else:
+                        if diff := create_diff(
+                            self.compilation_unit, original_txt, patched_txt, file
+                        ):
                             result["patches_diff"][file] = diff
 
+                        else:
+                            self._log(f"Impossible to generate patch; empty {result}")
                 except FormatImpossible as exception:
                     self._log(f'\nImpossible to patch:\n\t{result["description"]}\t{exception}')
 
         if results and self.slither.triage_mode:
             while True:
                 indexes = input(
-                    'Results to hide during next runs: "0,1,...,{}" or "All" (enter to not hide results): '.format(
-                        len(results)
-                    )
+                    f'Results to hide during next runs: "0,1,...,{len(results)}" or "All" (enter to not hide results): '
                 )
+
                 if indexes == "All":
                     self.slither.save_results_to_hide(results)
                     return []
@@ -243,7 +252,7 @@ class AbstractDetector(metaclass=abc.ABCMeta):
         info = "\n"
         for idx, result in enumerate(results):
             if self.slither.triage_mode:
-                info += "{}: ".format(idx)
+                info += f"{idx}: "
             info += result["description"]
-        info += "Reference: {}".format(self.WIKI)
+        info += f"Reference: {self.WIKI}"
         self._log(info)

@@ -21,16 +21,13 @@ class Return(Operation):
                 or isinstance(values, (TupleVariable, Function))
                 or values is None
             )
-            if values is None:
-                values = []
-            else:
-                values = [values]
+            values = [] if values is None else [values]
         else:
             # Remove None
             # Prior Solidity 0.5
             # return (0,)
             # was valid for returns(uint)
-            values = [v for v in values if not v is None]
+            values = [v for v in values if v is not None]
             self._valid_value(values)
         super().__init__()
         self._values = values
@@ -51,4 +48,4 @@ class Return(Operation):
         return self._unroll(self._values)
 
     def __str__(self):
-        return "RETURN {}".format(",".join(["{}".format(x) for x in self.values]))
+        return f'RETURN {",".join([f"{x}" for x in self.values])}'

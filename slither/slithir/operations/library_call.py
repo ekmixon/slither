@@ -25,24 +25,19 @@ class LibraryCall(HighLevelCall):
         return self.function.can_reenter(callstack)
 
     def __str__(self):
-        gas = ""
-        if self.call_gas:
-            gas = "gas:{}".format(self.call_gas)
-        arguments = []
-        if self.arguments:
-            arguments = self.arguments
+        gas = f"gas:{self.call_gas}" if self.call_gas else ""
+        arguments = self.arguments or []
         if not self.lvalue:
             lvalue = ""
         elif isinstance(self.lvalue.type, (list,)):
-            lvalue = "{}({}) = ".format(self.lvalue, ",".join(str(x) for x in self.lvalue.type))
+            lvalue = f'{self.lvalue}({",".join((str(x) for x in self.lvalue.type))}) = '
         else:
-            lvalue = "{}({}) = ".format(self.lvalue, self.lvalue.type)
+            lvalue = f"{self.lvalue}({self.lvalue.type}) = "
         txt = "{}LIBRARY_CALL, dest:{}, function:{}, arguments:{} {}"
 
         function_name = self.function_name
-        if self.function:
-            if isinstance(self.function, Function):
-                function_name = self.function.canonical_name
+        if self.function and isinstance(self.function, Function):
+            function_name = self.function.canonical_name
         return txt.format(
             lvalue,
             self.destination,

@@ -533,7 +533,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
 
             for node in self.nodes:
                 # if node.type == NodeType.OTHER_ENTRYPOINT:
-                if not node in self._nodes_ordered_dominators:
+                if node not in self._nodes_ordered_dominators:
                     self._compute_nodes_ordered_dominators(node)
 
         return self._nodes_ordered_dominators
@@ -589,10 +589,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         Return the list of return type
         If no return, return None
         """
-        returns = self.returns
-        if returns:
-            return [r.type for r in returns]
-        return None
+        return [r.type for r in returns] if (returns := self.returns) else None
 
     def returns_src(self) -> SourceMapping:
         return self._returns_src
@@ -850,7 +847,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         from slither.slithir.variables import Constant
 
         if self._return_values is None:
-            return_values = list()
+            return_values = []
             returns = [n for n in self.nodes if n.type == NodeType.RETURN]
             [  # pylint: disable=expression-not-assigned
                 return_values.extend(ir.values)
@@ -871,7 +868,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         from slither.slithir.variables import Constant
 
         if self._return_values_ssa is None:
-            return_values_ssa = list()
+            return_values_ssa = []
             returns = [n for n in self.nodes if n.type == NodeType.RETURN]
             [  # pylint: disable=expression-not-assigned
                 return_values_ssa.extend(ir.values)
@@ -939,7 +936,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
             parameters = [
                 self._convert_type_for_solidity_signature(x.type) for x in self.parameters
             ]
-            self._solidity_signature = self.name + "(" + ",".join(parameters) + ")"
+            self._solidity_signature = f"{self.name}(" + ",".join(parameters) + ")"
         return self._solidity_signature
 
     @property
@@ -966,8 +963,13 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         if self._signature_str is None:
             name, parameters, returnVars = self.signature
             self._signature_str = (
-                name + "(" + ",".join(parameters) + ") returns(" + ",".join(returnVars) + ")"
+                f"{name}("
+                + ",".join(parameters)
+                + ") returns("
+                + ",".join(returnVars)
+                + ")"
             )
+
         return self._signature_str
 
     # endregion
@@ -1272,9 +1274,9 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         with open(filename, "w", encoding="utf8") as f:
             f.write("digraph{\n")
             for node in self.nodes:
-                f.write('{}[label="{}"];\n'.format(node.node_id, str(node)))
+                f.write(f'{node.node_id}[label="{str(node)}"];\n')
                 for son in node.sons:
-                    f.write("{}->{};\n".format(node.node_id, son.node_id))
+                    f.write(f"{node.node_id}->{son.node_id};\n")
 
             f.write("}\n")
 
@@ -1286,8 +1288,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         """
 
         def description(node):
-            desc = "{}\n".format(node)
-            desc += "id: {}".format(node.node_id)
+            desc = "{}\n".format(node) + "id: {}".format(node.node_id)
             if node.dominance_frontier:
                 desc += "\ndominance frontier: {}".format(
                     [n.node_id for n in node.dominance_frontier]
@@ -1321,25 +1322,22 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         """
         from slither.core.cfg.node import NodeType
 
-        content = ""
-        content += "digraph{\n"
+        content = "" + "digraph{\n"
         for node in self.nodes:
-            label = "Node Type: {} {}\n".format(str(node.type), node.node_id)
+            label = f"Node Type: {str(node.type)} {node.node_id}\n"
             if node.expression and not skip_expressions:
-                label += "\nEXPRESSION:\n{}\n".format(node.expression)
+                label += f"\nEXPRESSION:\n{node.expression}\n"
             if node.irs and not skip_expressions:
                 label += "\nIRs:\n" + "\n".join([str(ir) for ir in node.irs])
-            content += '{}[label="{}"];\n'.format(node.node_id, label)
+            content += f'{node.node_id}[label="{label}"];\n'
             if node.type in [NodeType.IF, NodeType.IFLOOP]:
-                true_node = node.son_true
-                if true_node:
-                    content += '{}->{}[label="True"];\n'.format(node.node_id, true_node.node_id)
-                false_node = node.son_false
-                if false_node:
-                    content += '{}->{}[label="False"];\n'.format(node.node_id, false_node.node_id)
+                if true_node := node.son_true:
+                    content += f'{node.node_id}->{true_node.node_id}[label="True"];\n'
+                if false_node := node.son_false:
+                    content += f'{node.node_id}->{false_node.node_id}[label="False"];\n'
             else:
                 for son in node.sons:
-                    content += "{}->{};\n".format(node.node_id, son.node_id)
+                    content += f"{node.node_id}->{son.node_id};\n"
 
         content += "}\n"
         return content
@@ -1567,16 +1565,16 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
         from slither.core.cfg.node import NodeType
 
         if not self.is_implemented:
-            return dict()
+            return {}
 
         if self._entry_point is None:
-            return dict()
+            return {}
         # node, values
-        to_explore: List[Tuple["Node", Dict]] = [(self._entry_point, dict())]
+        to_explore: List[Tuple["Node", Dict]] = [(self._entry_point, {})]
         # node -> values
-        explored: Dict = dict()
+        explored: Dict = {}
         # name -> instances
-        ret: Dict = dict()
+        ret: Dict = {}
 
         while to_explore:
             node, values = to_explore[0]
@@ -1633,9 +1631,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
 
         if not isinstance(ir, (Phi, PhiCallback)) or len(ir.rvalues) > 1:
             return False
-        if not ir.rvalues:
-            return True
-        return ir.rvalues[0] == ir.lvalue
+        return ir.rvalues[0] == ir.lvalue if ir.rvalues else True
 
     def fix_phi(self, last_state_variables_instances, initial_state_variables_instances):
         from slither.slithir.operations import InternalCall, PhiCallback
@@ -1647,8 +1643,6 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
                     if isinstance(ir.lvalue, StateIRVariable):
                         additional = [initial_state_variables_instances[ir.lvalue.canonical_name]]
                         additional += last_state_variables_instances[ir.lvalue.canonical_name]
-                        ir.rvalues = list(set(additional + ir.rvalues))
-                    # function parameter
                     else:
                         # find index of the parameter
                         idx = self.parameters.index(ir.lvalue.non_ssa_version)
@@ -1656,7 +1650,7 @@ class Function(SourceMapping, metaclass=ABCMeta):  # pylint: disable=too-many-pu
                         additional = [n.ir.arguments[idx] for n in self.reachable_from_nodes]
                         additional = unroll(additional)
                         additional = [a for a in additional if not isinstance(a, Constant)]
-                        ir.rvalues = list(set(additional + ir.rvalues))
+                    ir.rvalues = list(set(additional + ir.rvalues))
                 if isinstance(ir, PhiCallback):
                     callee_ir = ir.callee_ir
                     if isinstance(callee_ir, InternalCall):

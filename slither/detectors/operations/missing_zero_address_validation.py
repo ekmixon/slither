@@ -77,11 +77,10 @@ Bob calls `updateOwner` without specifying the `newOwner`, soBob loses ownership
         ):
             return True
 
-        # Check recursively in all the parent nodes
-        for father in node.fathers:
-            if self._zero_address_validation(var, father, explored):
-                return True
-        return False
+        return any(
+            self._zero_address_validation(var, father, explored)
+            for father in node.fathers
+        )
 
     def _detect_missing_zero_address_validation(self, contract):
         """
@@ -101,10 +100,10 @@ Bob calls `updateOwner` without specifying the `newOwner`, soBob loses ownership
                     if sv.type == ElementaryType("address")
                 ]
 
-                addr_calls = False
-                for ir in node.irs:
-                    if isinstance(ir, (Send, Transfer, LowLevelCall)):
-                        addr_calls = True
+                addr_calls = any(
+                    isinstance(ir, (Send, Transfer, LowLevelCall))
+                    for ir in node.irs
+                )
 
                 # Continue if no address-typed state variables are written and if no send/transfer/call
                 if not sv_addrs_written and not addr_calls:
@@ -113,19 +112,18 @@ Bob calls `updateOwner` without specifying the `newOwner`, soBob loses ownership
                 # Check local variables used in such nodes
                 for var in node.local_variables_read:
                     # Check for address types that are tainted but not by msg.sender
-                    if var.type == ElementaryType("address") and is_tainted(
-                        var, function, ignore_generic_taint=True
-                    ):
-                        # Check for zero address validation of variable
-                        # in the context of modifiers used or prior function context
-                        if not (
+                    if (
+                        var.type == ElementaryType("address")
+                        and is_tainted(var, function, ignore_generic_taint=True)
+                        and not (
                             self._zero_address_validation_in_modifier(
                                 var, function.modifiers_statements
                             )
                             or self._zero_address_validation(var, node, [])
-                        ):
-                            # Report a variable only once per function
-                            var_nodes[var].append(node)
+                        )
+                    ):
+                        # Report a variable only once per function
+                        var_nodes[var].append(node)
             if var_nodes:
                 results.append((function, var_nodes))
         return results

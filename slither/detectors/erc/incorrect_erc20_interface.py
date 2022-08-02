@@ -62,10 +62,7 @@ contract Token{
         if name == "balanceOf" and parameters == ["address"] and returnVars != ["uint256"]:
             return True
 
-        if name == "totalSupply" and parameters == [] and returnVars != ["uint256"]:
-            return True
-
-        return False
+        return name == "totalSupply" and parameters == [] and returnVars != ["uint256"]
 
     @staticmethod
     def detect_incorrect_erc20_interface(contract):
@@ -101,8 +98,9 @@ contract Token{
         """
         results = []
         for c in self.compilation_unit.contracts_derived:
-            functions = IncorrectERC20InterfaceDetection.detect_incorrect_erc20_interface(c)
-            if functions:
+            if functions := IncorrectERC20InterfaceDetection.detect_incorrect_erc20_interface(
+                c
+            ):
                 for function in functions:
                     info = [
                         c,

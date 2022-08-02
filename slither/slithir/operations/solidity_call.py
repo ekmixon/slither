@@ -35,15 +35,18 @@ class SolidityCall(Call, OperationWithLValue):
             and isinstance(self.arguments[1], list)
         ):
             args = (
-                str(self.arguments[0]) + "(" + ",".join([str(a) for a in self.arguments[1]]) + ")"
+                f"{str(self.arguments[0])}("
+                + ",".join([str(a) for a in self.arguments[1]])
+                + ")"
             )
+
         else:
             args = ",".join([str(a) for a in self.arguments])
 
         lvalue = ""
         if self.lvalue:
             if isinstance(self.lvalue.type, (list,)):
-                lvalue = "{}({}) = ".format(self.lvalue, ",".join(str(x) for x in self.lvalue.type))
+                lvalue = f'{self.lvalue}({",".join((str(x) for x in self.lvalue.type))}) = '
             else:
-                lvalue = "{}({}) = ".format(self.lvalue, self.lvalue.type)
-        return lvalue + "SOLIDITY_CALL {}({})".format(self.function.full_name, args)
+                lvalue = f"{self.lvalue}({self.lvalue.type}) = "
+        return lvalue + f"SOLIDITY_CALL {self.function.full_name}({args})"

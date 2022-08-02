@@ -57,12 +57,15 @@ Boolean constants can be used directly and do not need to be compare to `true` o
             # Loop for every node in this function, looking for boolean constants
             for node in function.nodes:
                 for ir in node.irs:
-                    if isinstance(ir, Binary):
-                        if ir.type in [BinaryType.EQUAL, BinaryType.NOT_EQUAL]:
-                            for r in ir.read:
-                                if isinstance(r, Constant):
-                                    if isinstance(r.value, bool):
-                                        f_results.add(node)
+                    if isinstance(ir, Binary) and ir.type in [
+                        BinaryType.EQUAL,
+                        BinaryType.NOT_EQUAL,
+                    ]:
+                        for r in ir.read:
+                            if isinstance(r, Constant) and isinstance(
+                                r.value, bool
+                            ):
+                                f_results.add(node)
                 results.append((function, f_results))
 
         # Return the resulting set of nodes with improper uses of Boolean constants

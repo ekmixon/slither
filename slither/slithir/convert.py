@@ -142,19 +142,19 @@ def convert_expression(expression, node):
 
 
 def is_value(ins):
-    if isinstance(ins, TmpCall):
-        if isinstance(ins.ori, Member):
-            if ins.ori.variable_right == "value":
-                return True
-    return False
+    return (
+        isinstance(ins, TmpCall)
+        and isinstance(ins.ori, Member)
+        and ins.ori.variable_right == "value"
+    )
 
 
 def is_gas(ins):
-    if isinstance(ins, TmpCall):
-        if isinstance(ins.ori, Member):
-            if ins.ori.variable_right == "gas":
-                return True
-    return False
+    return (
+        isinstance(ins, TmpCall)
+        and isinstance(ins.ori, Member)
+        and ins.ori.variable_right == "gas"
+    )
 
 
 def _fits_under_integer(val: int, can_be_int: bool, can_be_uint) -> List[str]:
@@ -165,16 +165,12 @@ def _fits_under_integer(val: int, can_be_int: bool, can_be_uint) -> List[str]:
     :return:
     """
     ret: List[str] = []
-    n = 8
     assert can_be_int | can_be_uint
-    while n <= 256:
-        if can_be_uint:
-            if val <= 2 ** n - 1:
-                ret.append(f"uint{n}")
-        if can_be_int:
-            if val <= (2 ** n) / 2 - 1:
-                ret.append(f"int{n}")
-        n = n + 8
+    for n in range(8, 257, 8):
+        if can_be_uint and val <= 2**n - 1:
+            ret.append(f"uint{n}")
+        if can_be_int and val <= (2**n) / 2 - 1:
+            ret.append(f"int{n}")
     return ret
 
 
@@ -213,7 +209,7 @@ def _find_function_from_parameter(ir: Call, candidates: List[Function]) -> Optio
     type_args: List[str]
     for idx, arg in enumerate(arguments):
         if isinstance(arg, (list,)):
-            type_args = ["{}[{}]".format(get_type(arg[0].type), len(arg))]
+            type_args = [f"{get_type(arg[0].type)}[{len(arg)}]"]
         elif isinstance(arg, Function):
             type_args = [arg.signature_str]
         else:
@@ -260,9 +256,7 @@ def _find_function_from_parameter(ir: Call, candidates: List[Function]) -> Optio
             if len(candidates_kept) == 1:
                 return candidates_kept[0]
         candidates = candidates_kept
-    if len(candidates) == 1:
-        return candidates[0]
-    return None
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def is_temporary(ins):
@@ -311,10 +305,13 @@ def integrate_value_gas(result):
         for i in result:
             if isinstance(i, OperationWithLValue):
                 assigments[i.lvalue.name] = i
-            if isinstance(i, TmpCall):
-                if isinstance(i.called, Variable) and i.called.name in assigments:
-                    ins_ori = assigments[i.called.name]
-                    i.set_ori(ins_ori)
+            if (
+                isinstance(i, TmpCall)
+                and isinstance(i.called, Variable)
+                and i.called.name in assigments
+            ):
+                ins_ori = assigments[i.called.name]
+                i.set_ori(ins_ori)
 
         to_remove = []
         variable_to_replace = {}
@@ -339,7 +336,7 @@ def integrate_value_gas(result):
                 variable_to_replace[ins.lvalue.name] = ins.ori.variable_left
 
         # Remove the call to value/gas instruction
-        result = [i for i in result if not i in to_remove]
+        result = [i for i in result if i not in to_remove]
 
         # update the real call
         for ins in result:
@@ -351,8 +348,8 @@ def integrate_value_gas(result):
                     calls.append(ins.called)
                     ins.called = variable_to_replace[ins.called.name]
             if isinstance(ins, Argument):
+                was_changed = True
                 while ins.call_id in variable_to_replace:
-                    was_changed = True
                     ins.call_id = variable_to_replace[ins.call_id].name
 
     calls = list({str(c) for c in calls})
@@ -392,8 +389,7 @@ def propagate_type_and_convert_call(result, node):
             contract = (
                 node.function.contract if isinstance(node.function, FunctionContract) else None
             )
-            new_ins = extract_tmp_call(ins, contract)
-            if new_ins:
+            if new_ins := extract_tmp_call(ins, contract):
                 new_ins.set_node(ins.node)
                 ins = new_ins
                 result[idx] = ins
@@ -426,8 +422,7 @@ def propagate_type_and_convert_call(result, node):
             del result[idx]
             continue
 
-        new_ins = propagate_types(ins, node)
-        if new_ins:
+        if new_ins := propagate_types(ins, node):
             if isinstance(new_ins, (list,)):
                 for new_ins_ in new_ins:
                     new_ins_.set_node(ins.node)
@@ -438,7 +433,7 @@ def propagate_type_and_convert_call(result, node):
             else:
                 new_ins.set_node(ins.node)
                 result[idx] = new_ins
-        idx = idx + 1
+        idx += 1
     return result
 
 

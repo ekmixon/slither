@@ -62,4 +62,4 @@ class CallExpression(Expression):  # pylint: disable=too-many-instance-attribute
             if gas or value or salt:
                 options = [gas, value, salt]
                 txt += "{" + ",".join([o for o in options if o != ""]) + "}"
-        return txt + "(" + ",".join([str(a) for a in self._arguments]) + ")"
+        return f"{txt}(" + ",".join([str(a) for a in self._arguments]) + ")"

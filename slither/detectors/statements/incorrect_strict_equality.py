@@ -94,15 +94,17 @@ contract Crowdsale{
                             and ir.function.type.type_to == ElementaryType("uint256")
                         ):
                             taints.append(ir.lvalue)
-                    if isinstance(ir, Assignment):
-                        if ir.rvalue in self.sources_taint:
-                            taints.append(ir.lvalue)
+                    if (
+                        isinstance(ir, Assignment)
+                        and ir.rvalue in self.sources_taint
+                    ):
+                        taints.append(ir.lvalue)
 
         return taints
 
     # Retrieve all tainted (node, function) pairs
     def tainted_equality_nodes(self, funcs, taints):
-        results = dict()
+        results = {}
         taints += self.sources_taint
 
         for func in funcs:
@@ -123,10 +125,7 @@ contract Crowdsale{
         # Taint all BALANCE accesses
         taints = self.taint_balance_equalities(funcs)
 
-        # Accumulate tainted (node,function) pairs involved in strict equality (==) comparisons
-        results = self.tainted_equality_nodes(funcs, taints)
-
-        return results
+        return self.tainted_equality_nodes(funcs, taints)
 
     def _detect(self):
         results = []

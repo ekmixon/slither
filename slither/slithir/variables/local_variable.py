@@ -48,9 +48,7 @@ class LocalIRVariable(
 
     @property
     def refers_to(self):
-        if self.is_storage:
-            return self._refers_to
-        return set()
+        return self._refers_to if self.is_storage else set()
 
     @refers_to.setter
     def refers_to(self, variables):
@@ -69,5 +67,5 @@ class LocalIRVariable(
     @property
     def ssa_name(self):
         if self.is_storage:
-            return "{}_{} (-> {})".format(self._name, self.index, [v.name for v in self.refers_to])
-        return "{}_{}".format(self._name, self.index)
+            return f"{self._name}_{self.index} (-> {[v.name for v in self.refers_to]})"
+        return f"{self._name}_{self.index}"

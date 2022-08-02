@@ -5,9 +5,6 @@ from slither.core.context.context import Context
 from slither.core.solidity_types import ElementaryType, TypeInformation
 from slither.exceptions import SlitherException
 
-if TYPE_CHECKING:
-    pass
-
 SOLIDITY_VARIABLES = {
     "now": "uint256",
     "this": "address",
@@ -84,7 +81,7 @@ def solidity_function_signature(name):
     Returns:
         str
     """
-    return name + " returns({})".format(",".join(SOLIDITY_FUNCTIONS[name]))
+    return name + f' returns({",".join(SOLIDITY_FUNCTIONS[name])})'
 
 
 class SolidityVariable(Context):

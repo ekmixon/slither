@@ -66,16 +66,14 @@ Additionally, the for-loop uses the variable `max`, which is declared in a previ
         if node.variable_declaration:
             already_declared = already_declared | {node.variable_declaration}
 
-        if not node in self.fix_point_information:
+        if node not in self.fix_point_information:
             self.fix_point_information[node] = []
 
-        # If we already explored this node with the same information
         if already_declared:
             for fix_point in self.fix_point_information[node]:
                 if fix_point == already_declared:
                     return
 
-        if already_declared:
             self.fix_point_information[node] += [already_declared]
 
         for variable in set(node.local_variables_read + node.local_variables_written):
@@ -127,8 +125,7 @@ Additionally, the for-loop uses the variable `max`, which is declared in a previ
         self.fix_point_information = {}
 
         for contract in self.contracts:
-            predeclared_usages = self.detect_predeclared_in_contract(contract)
-            if predeclared_usages:
+            if predeclared_usages := self.detect_predeclared_in_contract(contract):
                 for (predeclared_usage_function, predeclared_usage_nodes) in predeclared_usages:
                     for (
                         predeclared_usage_node,

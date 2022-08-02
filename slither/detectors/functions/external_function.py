@@ -39,9 +39,12 @@ class ExternalFunction(AbstractDetector):
         for func in contract.all_functions_called:
             # Loop through all nodes in the function, add all calls to a list.
             for node in func.nodes:
-                for ir in node.irs:
-                    if isinstance(ir, (InternalCall, SolidityCall)):
-                        result.append(ir.function)
+                result.extend(
+                    ir.function
+                    for ir in node.irs
+                    if isinstance(ir, (InternalCall, SolidityCall))
+                )
+
         return result
 
     @staticmethod
@@ -108,18 +111,15 @@ class ExternalFunction(AbstractDetector):
     def _detect(self):  # pylint: disable=too-many-locals,too-many-branches
         results = []
 
-        # Create a set to track contracts with dynamic calls. All contracts with dynamic calls could potentially be
-        # calling functions internally, and thus we can't assume any function in such contracts isn't called by them.
-        dynamic_call_contracts = set()
-
         # Create a completed functions set to skip over functions already processed (any functions which are the base
         # of, or override hierarchically are processed together).
         completed_functions = set()
 
-        # First we build our set of all contracts with dynamic calls
-        for contract in self.contracts:
-            if self._contains_internal_dynamic_call(contract):
-                dynamic_call_contracts.add(contract)
+        dynamic_call_contracts = {
+            contract
+            for contract in self.contracts
+            if self._contains_internal_dynamic_call(contract)
+        }
 
         # Loop through all contracts
         for contract in self.contracts:
@@ -159,10 +159,10 @@ class ExternalFunction(AbstractDetector):
                 )
                 completed_functions = completed_functions.union(all_function_definitions)
 
-                # Filter false-positives: Determine if any of these sources have dynamic calls, if so, flag all of these
-                # function definitions, and then flag all functions in all contracts that make dynamic calls.
-                sources_with_dynamic_calls = set(all_possible_sources) & dynamic_call_contracts
-                if sources_with_dynamic_calls:
+                if (
+                    sources_with_dynamic_calls := set(all_possible_sources)
+                    & dynamic_call_contracts
+                ):
                     functions_in_dynamic_call_sources = {
                         f
                         for dyn_contract in sources_with_dynamic_calls
@@ -187,14 +187,12 @@ class ExternalFunction(AbstractDetector):
                 if is_called:
                     continue
 
-                # As we collect all shadowed functions in get_all_function_definitions
-                # Some function coming from a base might already been declared as external
-                all_function_definitions = [
+                if all_function_definitions := [
                     f
                     for f in all_function_definitions
-                    if f.visibility == "public" and f.contract == f.contract_declarer
-                ]
-                if all_function_definitions:
+                    if f.visibility == "public"
+                    and f.contract == f.contract_declarer
+                ]:
                     all_function_definitions = sorted(
                         all_function_definitions, key=lambda x: x.canonical_name
                     )

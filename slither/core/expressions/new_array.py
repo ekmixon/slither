@@ -20,4 +20,4 @@ class NewArray(Expression):
         return self._depth
 
     def __str__(self):
-        return "new " + str(self._array_type) + "[]" * self._depth
+        return f"new {str(self._array_type)}" + "[]" * self._depth

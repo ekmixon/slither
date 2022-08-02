@@ -55,21 +55,34 @@ Every Ether sent to `Locked` will be lost."""
                     return False
                 for node in function.nodes:
                     for ir in node.irs:
-                        if isinstance(
-                            ir,
-                            (Send, Transfer, HighLevelCall, LowLevelCall, NewContract),
+                        if (
+                            isinstance(
+                                ir,
+                                (
+                                    Send,
+                                    Transfer,
+                                    HighLevelCall,
+                                    LowLevelCall,
+                                    NewContract,
+                                ),
+                            )
+                            and ir.call_value
+                            and ir.call_value != 0
                         ):
-                            if ir.call_value and ir.call_value != 0:
-                                return False
-                        if isinstance(ir, (LowLevelCall)):
-                            if ir.function_name in ["delegatecall", "callcode"]:
-                                return False
+                            return False
+                        if isinstance(ir, (LowLevelCall)) and ir.function_name in [
+                            "delegatecall",
+                            "callcode",
+                        ]:
+                            return False
                         # If a new internal call or librarycall
                         # Add it to the list to explore
                         # InternalCall if to follow internal call in libraries
-                        if isinstance(ir, (InternalCall, LibraryCall)):
-                            if not ir.function in explored:
-                                to_explore.append(ir.function)
+                        if (
+                            isinstance(ir, (InternalCall, LibraryCall))
+                            and ir.function not in explored
+                        ):
+                            to_explore.append(ir.function)
 
         return True
 
@@ -79,8 +92,9 @@ Every Ether sent to `Locked` will be lost."""
         for contract in self.compilation_unit.contracts_derived:
             if contract.is_signature_only():
                 continue
-            funcs_payable = [function for function in contract.functions if function.payable]
-            if funcs_payable:
+            if funcs_payable := [
+                function for function in contract.functions if function.payable
+            ]:
                 if self.do_no_send_ether(contract):
                     info = ["Contract locking ether found:\n"]
                     info += ["\tContract ", contract, " has payable functions:\n"]

@@ -57,7 +57,7 @@ If `d.()` re-enters, the `Counter` events will be shown in an incorrect order, w
                     if self.KEY not in node.context:
                         continue
                     if node.context[self.KEY].calls:
-                        if not any(n != node for n in node.context[self.KEY].calls):
+                        if all(n == node for n in node.context[self.KEY].calls):
                             continue
 
                         # calls are ordered
@@ -66,15 +66,14 @@ If `d.()` re-enters, the `Counter` events will be shown in an incorrect order, w
                             calls=to_hashable(node.context[self.KEY].calls),
                             send_eth=to_hashable(node.context[self.KEY].send_eth),
                         )
-                        finding_vars = {
+                        if finding_vars := {
                             FindingValue(
                                 e,
                                 e.node,
                                 tuple(sorted(nodes, key=lambda x: x.node_id)),
                             )
                             for (e, nodes) in node.context[self.KEY].events.items()
-                        }
-                        if finding_vars:
+                        }:
                             result[finding_key] |= finding_vars
         return result
 

@@ -87,8 +87,8 @@ class FunctionSolc:
 
         self._analyze_type()
 
-        self._node_to_nodesolc: Dict[Node, NodeSolc] = dict()
-        self._node_to_yulobject: Dict[Node, YulBlock] = dict()
+        self._node_to_nodesolc: Dict[Node, NodeSolc] = {}
+        self._node_to_yulobject: Dict[Node, YulBlock] = {}
 
         self._local_variables_parser: List[
             Union[LocalVariableSolc, LocalVariableInitFromTupleSolc]
@@ -120,9 +120,7 @@ class FunctionSolc:
         return self._slither_parser.get_key()
 
     def get_children(self, key: str) -> str:
-        if self.is_compact_ast:
-            return key
-        return "children"
+        return key if self.is_compact_ast else "children"
 
     @property
     def is_compact_ast(self):
@@ -159,9 +157,10 @@ class FunctionSolc:
         if local_var_parser.underlying_variable.name:
             known_variables = [v.name for v in self._function.variables]
             while local_var_parser.underlying_variable.name in known_variables:
-                local_var_parser.underlying_variable.name += "_scope_{}".format(
-                    self._counter_scope_local_variables
+                local_var_parser.underlying_variable.name += (
+                    f"_scope_{self._counter_scope_local_variables}"
                 )
+
                 self._counter_scope_local_variables += 1
                 known_variables = [v.name for v in self._function.variables]
         if local_var_parser.reference_id is not None:
@@ -189,24 +188,26 @@ class FunctionSolc:
         For example both the fallback and the receiver will have an empty name
         :return:
         """
-        if self.is_compact_ast:
-            attributes = self._functionNotParsed
-        else:
-            attributes = self._functionNotParsed["attributes"]
-
         if self._function.name == "":
             self._function.function_type = FunctionType.FALLBACK
+            attributes = (
+                self._functionNotParsed
+                if self.is_compact_ast
+                else self._functionNotParsed["attributes"]
+            )
+
             # 0.6.x introduced the receiver function
             # It has also an empty name, so we need to check the kind attribute
-            if "kind" in attributes:
-                if attributes["kind"] == "receive":
-                    self._function.function_type = FunctionType.RECEIVE
+            if "kind" in attributes and attributes["kind"] == "receive":
+                self._function.function_type = FunctionType.RECEIVE
         else:
             self._function.function_type = FunctionType.NORMAL
 
-        if isinstance(self._function, FunctionContract):
-            if self._function.name == self._function.contract_declarer.name:
-                self._function.function_type = FunctionType.CONSTRUCTOR
+        if (
+            isinstance(self._function, FunctionContract)
+            and self._function.name == self._function.contract_declarer.name
+        ):
+            self._function.function_type = FunctionType.CONSTRUCTOR
 
     def _analyze_attributes(self):
         if self.is_compact_ast:
@@ -231,21 +232,21 @@ class FunctionSolc:
         if "isConstructor" in attributes and attributes["isConstructor"]:
             self._function.function_type = FunctionType.CONSTRUCTOR
 
-        if "kind" in attributes:
-            if attributes["kind"] == "constructor":
-                self._function.function_type = FunctionType.CONSTRUCTOR
+        if "kind" in attributes and attributes["kind"] == "constructor":
+            self._function.function_type = FunctionType.CONSTRUCTOR
 
-        if "visibility" in attributes:
-            self._function.visibility = attributes["visibility"]
-        # old solc
-        elif "public" in attributes:
-            if attributes["public"]:
-                self._function.visibility = "public"
-            else:
-                self._function.visibility = "private"
-        else:
+        if (
+            "visibility" not in attributes
+            and "public" in attributes
+            and attributes["public"]
+            or "visibility" not in attributes
+            and "public" not in attributes
+        ):
             self._function.visibility = "public"
-
+        elif "visibility" not in attributes:
+            self._function.visibility = "private"
+        else:
+            self._function.visibility = attributes["visibility"]
         if "payable" in attributes:
             self._function.payable = attributes["payable"]
 
@@ -672,7 +673,7 @@ class FunctionSolc:
         externalCall = statement.get("externalCall", None)
 
         if externalCall is None:
-            raise ParsingError("Try/Catch not correctly parsed by Slither %s" % statement)
+            raise ParsingError(f"Try/Catch not correctly parsed by Slither {statement}")
         catch_scope = Scope(
             node.underlying_node.scope.is_checked, False, node.underlying_node.scope
         )
@@ -689,7 +690,7 @@ class FunctionSolc:
         block = statement.get("block", None)
 
         if block is None:
-            raise ParsingError("Catch not correctly parsed by Slither %s" % statement)
+            raise ParsingError(f"Catch not correctly parsed by Slither {statement}")
         try_scope = Scope(node.underlying_node.scope.is_checked, False, node.underlying_node.scope)
 
         try_node = self._new_node(NodeType.CATCH, statement["src"], try_scope)
@@ -724,6 +725,7 @@ class FunctionSolc:
             link_underlying_nodes(node, new_node)
             return new_node
         except MultipleVariablesDeclaration:
+            i = 0
             # Custom handling of var (a,b) = .. style declaration
             if self.is_compact_ast:
                 variables = statement["declarations"]
@@ -734,7 +736,6 @@ class FunctionSolc:
                     and len(statement["initialValue"]["components"]) == count
                 ):
                     inits = statement["initialValue"]["components"]
-                    i = 0
                     new_node = node
                     for variable in variables:
                         if variable is None:
@@ -757,7 +758,6 @@ class FunctionSolc:
                     # we can split in multiple declarations, without init
                     # Then we craft one expression that does the assignment
                     variables = []
-                    i = 0
                     new_node = node
                     for variable in statement["declarations"]:
                         if variable:
@@ -819,8 +819,7 @@ class FunctionSolc:
                 assert len(children) == (count + 1)
                 tuple_vars = children[count]
 
-                variables_declaration = children[0:count]
-                i = 0
+                variables_declaration = children[:count]
                 new_node = node
                 if tuple_vars[self.get_key()] == "TupleExpression":
                     assert len(tuple_vars[self.get_children("children")]) == count
@@ -955,8 +954,6 @@ class FunctionSolc:
                 node = asm_node
         elif name == "DoWhileStatement":
             node = self._parse_dowhile(statement, node)
-        # For Continue / Break / Return / Throw
-        # The is fixed later
         elif name == "Continue":
             continue_node = self._new_node(NodeType.CONTINUE, statement["src"], scope)
             link_underlying_nodes(node, continue_node)
@@ -971,14 +968,13 @@ class FunctionSolc:
             if self.is_compact_ast:
                 if statement.get("expression", None):
                     return_node.add_unparsed_expression(statement["expression"])
-            else:
-                if (
+            elif (
                     self.get_children("children") in statement
                     and statement[self.get_children("children")]
                 ):
-                    assert len(statement[self.get_children("children")]) == 1
-                    expression = statement[self.get_children("children")][0]
-                    return_node.add_unparsed_expression(expression)
+                assert len(statement[self.get_children("children")]) == 1
+                expression = statement[self.get_children("children")][0]
+                return_node.add_unparsed_expression(expression)
             node = return_node
         elif name == "Throw":
             throw_node = self._new_node(NodeType.THROW, statement["src"], scope)
@@ -1010,10 +1006,8 @@ class FunctionSolc:
             node = new_node
         elif name == "TryStatement":
             node = self._parse_try_catch(statement, node)
-        # elif name == 'TryCatchClause':
-        #     self._parse_catch(statement, node)
         else:
-            raise ParsingError("Statement not parsed %s" % name)
+            raise ParsingError(f"Statement not parsed {name}")
 
         return node
 
@@ -1094,10 +1088,9 @@ class FunctionSolc:
         if node.type == NodeType.STARTLOOP:
             counter += 1
 
-        visited = visited + [node]
+        visited += [node]
         for son in node.sons:
-            ret = self._find_end_loop(son, visited, counter)
-            if ret:
+            if ret := self._find_end_loop(son, visited, counter):
                 return ret
 
         return None
@@ -1109,10 +1102,9 @@ class FunctionSolc:
         if node.type == NodeType.STARTLOOP:
             return node
 
-        visited = visited + [node]
+        visited += [node]
         for father in node.fathers:
-            ret = self._find_start_loop(father, visited)
-            if ret:
+            if ret := self._find_start_loop(father, visited):
                 return ret
 
         return None
@@ -1125,8 +1117,8 @@ class FunctionSolc:
             # The exploration will reach a STARTLOOP before reaching the endloop
             # We start with -1 as counter to catch this corner case
             end_node = self._find_end_loop(node, [], -1)
-            if not end_node:
-                raise ParsingError("Break in no-loop context {}".format(node.function))
+        if not end_node:
+            raise ParsingError(f"Break in no-loop context {node.function}")
 
         for son in node.sons:
             son.remove_father(node)
@@ -1137,7 +1129,7 @@ class FunctionSolc:
         start_node = self._find_start_loop(node, [])
 
         if not start_node:
-            raise ParsingError("Continue in no-loop context {}".format(node.node_id))
+            raise ParsingError(f"Continue in no-loop context {node.node_id}")
 
         for son in node.sons:
             son.remove_father(node)
@@ -1145,8 +1137,9 @@ class FunctionSolc:
         start_node.add_father(node)
 
     def _fix_try(self, node: Node):
-        end_node = next((son for son in node.sons if son.type != NodeType.CATCH), None)
-        if end_node:
+        if end_node := next(
+            (son for son in node.sons if son.type != NodeType.CATCH), None
+        ):
             for son in node.sons:
                 if son.type == NodeType.CATCH:
                     self._fix_catch(son, end_node)

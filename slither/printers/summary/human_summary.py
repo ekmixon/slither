@@ -39,10 +39,7 @@ class PrinterHumanSummary(AbstractPrinter):
         pause = "pause" in functions_name
 
         if "mint" in functions_name:
-            if "mintingFinished" in state_variables:
-                mint_unlimited = False
-            else:
-                mint_unlimited = True
+            mint_unlimited = "mintingFinished" not in state_variables
         else:
             mint_unlimited = None  # no minting
 
@@ -63,11 +60,7 @@ class PrinterHumanSummary(AbstractPrinter):
         if mint_unlimited is None:
             txt += green("No Minting") + "\n"
         else:
-            if mint_unlimited:
-                txt += red("∞ Minting") + "\n"
-            else:
-                txt += yellow("Minting") + "\n"
-
+            txt += red("∞ Minting") + "\n" if mint_unlimited else yellow("Minting") + "\n"
         if not race_condition_mitigated:
             txt += red("Approve Race Cond.") + "\n"
 
@@ -126,26 +119,26 @@ class PrinterHumanSummary(AbstractPrinter):
             medium,
             high,
         ) = self._get_detectors_result()
-        txt = "Number of optimization issues: {}\n".format(green(optimization))
-        txt += "Number of informational issues: {}\n".format(green(informational))
-        txt += "Number of low issues: {}\n".format(green(low))
+        txt = (
+            f"Number of optimization issues: {green(optimization)}\n"
+            + f"Number of informational issues: {green(informational)}\n"
+        )
+
+        txt += f"Number of low issues: {green(low)}\n"
         if medium > 0:
-            txt += "Number of medium issues: {}\n".format(yellow(medium))
+            txt += f"Number of medium issues: {yellow(medium)}\n"
         else:
-            txt += "Number of medium issues: {}\n".format(green(medium))
+            txt += f"Number of medium issues: {green(medium)}\n"
         if high > 0:
-            txt += "Number of high issues: {}\n".format(red(high))
+            txt += f"Number of high issues: {red(high)}\n"
         else:
-            txt += "Number of high issues: {}\n\n".format(green(high))
+            txt += f"Number of high issues: {green(high)}\n\n"
 
         return txt, all_results, optimization, informational, low, medium, high
 
     @staticmethod
     def _is_complex_code(contract):
-        for f in contract.functions:
-            if compute_cyclomatic_complexity(f) > 7:
-                return True
-        return False
+        return any(compute_cyclomatic_complexity(f) > 7 for f in contract.functions)
 
     def is_complex_code(self, contract):
         """
@@ -158,8 +151,7 @@ class PrinterHumanSummary(AbstractPrinter):
 
         is_complex = self._is_complex_code(contract)
 
-        result = red("Yes") if is_complex else green("No")
-        return result
+        return red("Yes") if is_complex else green("No")
 
     @staticmethod
     def _number_functions(contract):
@@ -179,11 +171,10 @@ class PrinterHumanSummary(AbstractPrinter):
                 is_dep = self.slither.crytic_compile.is_dependency(filename)
             if is_dep:
                 total_dep_lines += lines
+            elif is_test_file(Path(filename)):
+                total_tests_lines += lines
             else:
-                if is_test_file(Path(filename)):
-                    total_tests_lines += lines
-                else:
-                    total_lines += lines
+                total_lines += lines
         return total_lines, total_dep_lines, total_tests_lines
 
     def _get_number_of_assembly_lines(self):
@@ -192,8 +183,7 @@ class PrinterHumanSummary(AbstractPrinter):
             for function in contract.functions_declared:
                 for node in function.nodes:
                     if node.type == NodeType.ASSEMBLY:
-                        inline_asm = node.inline_asm
-                        if inline_asm:
+                        if inline_asm := node.inline_asm:
                             total_asm_lines += len(inline_asm.splitlines())
         return total_asm_lines
 
@@ -213,8 +203,7 @@ class PrinterHumanSummary(AbstractPrinter):
     def _standard_libraries(self):
         libraries = []
         for contract in self.contracts:
-            lib = is_standard_library(contract)
-            if lib:
+            if lib := is_standard_library(contract):
                 libraries.append(lib)
 
         return libraries
@@ -243,9 +232,8 @@ class PrinterHumanSummary(AbstractPrinter):
                 if (
                     pragma.source_mapping["filename_absolute"]
                     == contract.source_mapping["filename_absolute"]
-                ):
-                    if pragma.is_abi_encoder_v2:
-                        use_abi_encoder = True
+                ) and pragma.is_abi_encoder_v2:
+                    use_abi_encoder = True
 
         for function in contract.functions:
             if function.payable:
@@ -271,12 +259,11 @@ class PrinterHumanSummary(AbstractPrinter):
                     "callcode",
                 ]:
                     can_delegatecall = True
-                if isinstance(ir, HighLevelCall):
-                    if (
-                        isinstance(ir.function, (Function, StateVariable))
-                        and ir.function.contract.is_possible_token
-                    ):
-                        has_token_interaction = True
+                if isinstance(ir, HighLevelCall) and (
+                    isinstance(ir.function, (Function, StateVariable))
+                    and ir.function.contract.is_possible_token
+                ):
+                    has_token_interaction = True
 
         return {
             "Receive ETH": has_payable,
@@ -291,7 +278,7 @@ class PrinterHumanSummary(AbstractPrinter):
             "Proxy": contract.is_upgradeable_proxy,
         }
 
-    def output(self, _filename):  # pylint: disable=too-many-locals,too-many-statements
+    def output(self, _filename):    # pylint: disable=too-many-locals,too-many-statements
         """
         _filename is not used
             Args:
@@ -308,12 +295,12 @@ class PrinterHumanSummary(AbstractPrinter):
             "number_lines_assembly": 0,
             "standard_libraries": [],
             "ercs": [],
-            "number_findings": dict(),
+            "number_findings": {},
             "detectors": [],
         }
 
-        lines_number = self._lines_number()
-        if lines_number:
+
+        if lines_number := self._lines_number():
             total_lines, total_dep_lines, total_tests_lines = lines_number
             txt += f"Number of lines: {total_lines} (+ {total_dep_lines} in dependencies, + {total_tests_lines} in tests)\n"
             results["number_lines"] = total_lines
@@ -349,13 +336,11 @@ class PrinterHumanSummary(AbstractPrinter):
         }
         results["detectors"] = detectors_results
 
-        libs = self._standard_libraries()
-        if libs:
+        if libs := self._standard_libraries():
             txt += f'\nUse: {", ".join(libs)}\n'
             results["standard_libraries"] = [str(l) for l in libs]
 
-        ercs = self._ercs()
-        if ercs:
+        if ercs := self._ercs():
             txt += f'ERCs: {", ".join(ercs)}\n'
             results["ercs"] = [str(e) for e in ercs]
 
@@ -419,6 +404,4 @@ class PrinterHumanSummary(AbstractPrinter):
 
         results["contracts"]["elements"] = results_contract.elements
 
-        json = self.generate_output(txt, additional_fields=results)
-
-        return json
+        return self.generate_output(txt, additional_fields=results)

@@ -13,7 +13,7 @@ class ContractSummary(AbstractPrinter):
 
     WIKI = "https://github.com/trailofbits/slither/wiki/Printer-documentation#contract-summary"
 
-    def output(self, _filename):  # pylint: disable=too-many-locals
+    def output(self, _filename):    # pylint: disable=too-many-locals
         """
         _filename is not used
         Args:
@@ -64,19 +64,15 @@ class ContractSummary(AbstractPrinter):
             public = list(collect.items())
 
             for contract, functions in public:
-                txt += blue("  - From {}\n".format(contract))
+                txt += blue(f"  - From {contract}\n")
 
                 functions = sorted(functions, key=lambda f: f.full_name)
 
                 for function in functions:
                     if function.visibility in ["external", "public"]:
-                        txt += green(
-                            "    - {} ({})\n".format(function.full_name, function.visibility)
-                        )
+                        txt += green(f"    - {function.full_name} ({function.visibility})\n")
                     if function.visibility in ["internal", "private"]:
-                        txt += magenta(
-                            "    - {} ({})\n".format(function.full_name, function.visibility)
-                        )
+                        txt += magenta(f"    - {function.full_name} ({function.visibility})\n")
                     if function.visibility not in [
                         "external",
                         "public",

@@ -13,4 +13,4 @@ class NewElementaryType(Expression):
         return self._type
 
     def __str__(self):
-        return "new " + str(self._type)
+        return f"new {str(self._type)}"

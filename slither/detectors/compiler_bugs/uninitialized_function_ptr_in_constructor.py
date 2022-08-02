@@ -48,9 +48,12 @@ def _get_variables_entrance(function):
     """
     ret = []
     if function.entry_point:
-        for ir_ssa in function.entry_point.irs_ssa:
-            if isinstance(ir_ssa, OperationWithLValue):
-                ret.append(ir_ssa.lvalue)
+        ret.extend(
+            ir_ssa.lvalue
+            for ir_ssa in function.entry_point.irs_ssa
+            if isinstance(ir_ssa, OperationWithLValue)
+        )
+
     return ret
 
 
@@ -118,8 +121,7 @@ The call to `a(10)` will lead to unexpected behavior because function pointer `a
         :return: A list of nodes with uninitialized function pointer calls in the constructor of given contract
         """
         results = []
-        constructor = contract.constructors_declared
-        if constructor:
+        if constructor := contract.constructors_declared:
             variables_entrance = _get_variables_entrance(constructor)
             results = [
                 node for node in constructor.nodes if _is_vulnerable(node, variables_entrance)

@@ -38,6 +38,4 @@ class TypeInformation(Type):
         return f"type({self.type.name})"
 
     def __eq__(self, other):
-        if not isinstance(other, TypeInformation):
-            return False
-        return self.type == other.type
+        return self.type == other.type if isinstance(other, TypeInformation) else False

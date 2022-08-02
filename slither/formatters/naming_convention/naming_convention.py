@@ -128,7 +128,7 @@ SOLIDITY_KEYWORDS += ElementaryTypeName
 
 def _name_already_use(slither, name):
     # Do not convert to a name used somewhere else
-    if not KEY in slither.context:
+    if KEY not in slither.context:
         all_names = set()
         for contract in slither.contracts_derived:
             all_names = all_names.union({st.name for st in contract.structures})
@@ -149,7 +149,7 @@ def _convert_CapWords(original_name, slither):
     while "_" in name:
         offset = name.find("_")
         if len(name) > offset:
-            name = name[0:offset] + name[offset + 1].upper() + name[offset + 1 :]
+            name = name[:offset] + name[offset + 1].upper() + name[offset + 1 :]
 
     if _name_already_use(slither, name):
         raise FormatImpossible(f"{original_name} cannot be converted to {name} (already used)")
@@ -167,7 +167,7 @@ def _convert_mixedCase(original_name, compilation_unit: SlitherCompilationUnit):
     while "_" in name:
         offset = name.find("_")
         if len(name) > offset:
-            name = name[0:offset] + name[offset + 1].upper() + name[offset + 2 :]
+            name = name[:offset] + name[offset + 1].upper() + name[offset + 2 :]
 
     name = name[0].lower() + name[1:]
     if _name_already_use(compilation_unit, name):
@@ -279,7 +279,7 @@ def _patch(compilation_unit: SlitherCompilationUnit, result, element, _target):
         )
 
     else:
-        raise FormatError("Unknown naming convention! " + _target)
+        raise FormatError(f"Unknown naming convention! {_target}")
 
     _explore(
         compilation_unit, result, target, conventions[element["additional_fields"]["convention"]]
@@ -395,19 +395,19 @@ def _explore_type(  # pylint: disable=too-many-arguments,too-many-locals,too-man
 
                 create_patch(result, filename_source_code, loc_start, loc_end, old_str, new_str)
 
-            if isinstance(custom_type.type_to, (UserDefinedType, MappingType)):
-                loc_start = start + re_match.start(2)
-                loc_end = start + re_match.end(2)
-                _explore_type(
-                    slither,
-                    result,
-                    target,
-                    convert,
-                    custom_type.type_to,
-                    filename_source_code,
-                    loc_start,
-                    loc_end,
-                )
+        if isinstance(custom_type.type_to, (UserDefinedType, MappingType)):
+            loc_start = start + re_match.start(2)
+            loc_end = start + re_match.end(2)
+            _explore_type(
+                slither,
+                result,
+                target,
+                convert,
+                custom_type.type_to,
+                filename_source_code,
+                loc_start,
+                loc_end,
+            )
 
 
 def _explore_variables_declaration(  # pylint: disable=too-many-arguments,too-many-locals,too-many-nested-blocks
@@ -444,45 +444,49 @@ def _explore_variables_declaration(  # pylint: disable=too-many-arguments,too-ma
             create_patch(result, filename_source_code, loc_start, loc_end, old_str, new_str)
 
             # Patch comment only makes sense for local variable declaration in the parameter list
-            if patch_comment and isinstance(variable, LocalVariable):
-                if "lines" in variable.source_mapping and variable.source_mapping["lines"]:
-                    func = variable.function
-                    end_line = func.source_mapping["lines"][0]
-                    if variable in func.parameters:
-                        idx = len(func.parameters) - func.parameters.index(variable) + 1
-                        first_line = end_line - idx - 2
+            if (
+                patch_comment
+                and isinstance(variable, LocalVariable)
+                and "lines" in variable.source_mapping
+                and variable.source_mapping["lines"]
+            ):
+                func = variable.function
+                end_line = func.source_mapping["lines"][0]
+                if variable in func.parameters:
+                    idx = len(func.parameters) - func.parameters.index(variable) + 1
+                    first_line = end_line - idx - 2
 
-                        potential_comments = slither.source_code[filename_source_code].encode(
-                            "utf8"
-                        )
-                        potential_comments = potential_comments.splitlines(keepends=True)[
-                            first_line : end_line - 1
-                        ]
+                    potential_comments = slither.source_code[filename_source_code].encode(
+                        "utf8"
+                    )
+                    potential_comments = potential_comments.splitlines(keepends=True)[
+                        first_line : end_line - 1
+                    ]
 
-                        idx_beginning = func.source_mapping["start"]
-                        idx_beginning += -func.source_mapping["starting_column"] + 1
-                        idx_beginning += -sum([len(c) for c in potential_comments])
+                    idx_beginning = func.source_mapping["start"]
+                    idx_beginning += -func.source_mapping["starting_column"] + 1
+                    idx_beginning += -sum(len(c) for c in potential_comments)
 
-                        old_comment = f"@param {old_str}".encode("utf8")
+                    old_comment = f"@param {old_str}".encode("utf8")
 
-                        for line in potential_comments:
-                            idx = line.find(old_comment)
-                            if idx >= 0:
-                                loc_start = idx + idx_beginning
-                                loc_end = loc_start + len(old_comment)
-                                new_comment = f"@param {new_str}".encode("utf8")
+                    for line in potential_comments:
+                        idx = line.find(old_comment)
+                        if idx >= 0:
+                            loc_start = idx + idx_beginning
+                            loc_end = loc_start + len(old_comment)
+                            new_comment = f"@param {new_str}".encode("utf8")
 
-                                create_patch(
-                                    result,
-                                    filename_source_code,
-                                    loc_start,
-                                    loc_end,
-                                    old_comment,
-                                    new_comment,
-                                )
+                            create_patch(
+                                result,
+                                filename_source_code,
+                                loc_start,
+                                loc_end,
+                                old_comment,
+                                new_comment,
+                            )
 
-                                break
-                            idx_beginning += len(line)
+                            break
+                        idx_beginning += len(line)
 
 
 def _explore_structures_declaration(slither, structures, result, target, convert):
@@ -566,7 +570,7 @@ def _explore_irs(slither, irs, result, target, convert):
                     full_txt_start:full_txt_end
                 ]
 
-                if not target.name.encode("utf8") in full_txt:
+                if target.name.encode("utf8") not in full_txt:
                     raise FormatError(f"{target} not found in {full_txt} ({source_mapping}")
 
                 old_str = target.name.encode("utf8")

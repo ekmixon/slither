@@ -66,8 +66,7 @@ contract DerivedContract is BaseContract{
         """
         results: List[Output] = []
         for contract in self.contracts:
-            shadowing = detect_shadowing(contract)
-            if shadowing:
+            if shadowing := detect_shadowing(contract):
                 for all_variables in shadowing:
                     shadow = all_variables[0]
                     variables = all_variables[1:]

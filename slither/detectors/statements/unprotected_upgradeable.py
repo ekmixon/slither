@@ -61,8 +61,7 @@ class UnprotectedUpgradeable(AbstractDetector):
 
         for contract in self.compilation_unit.contracts_derived:
             if contract.is_upgradeable:
-                functions_that_can_destroy = _can_be_destroyed(contract)
-                if functions_that_can_destroy:
+                if functions_that_can_destroy := _can_be_destroyed(contract):
                     initiliaze_functions = [f for f in contract.functions if f.name == "initialize"]
                     vars_init_ = [
                         init.all_state_variables_written() for init in initiliaze_functions

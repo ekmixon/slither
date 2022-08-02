@@ -52,20 +52,16 @@ Bob calls `kill` and destructs the contract."""
             return False
 
         calls = [c.name for c in func.internal_calls]
-        if not ("suicide(address)" in calls or "selfdestruct(address)" in calls):
+        if (
+            "suicide(address)" not in calls
+            and "selfdestruct(address)" not in calls
+        ):
             return False
 
-        if func.is_protected():
-            return False
-
-        return True
+        return not func.is_protected()
 
     def detect_suicidal(self, contract):
-        ret = []
-        for f in contract.functions_declared:
-            if self.detect_suicidal_func(f):
-                ret.append(f)
-        return ret
+        return [f for f in contract.functions_declared if self.detect_suicidal_func(f)]
 
     def _detect(self):
         """Detect the suicidal functions"""

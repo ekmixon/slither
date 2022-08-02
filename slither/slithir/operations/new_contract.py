@@ -50,8 +50,7 @@ class NewContract(Call, OperationWithLValue):  # pylint: disable=too-many-instan
     @property
     def contract_created(self):
         contract_name = self.contract_name
-        contract_instance = self.compilation_unit.get_contract_from_name(contract_name)
-        return contract_instance
+        return self.compilation_unit.get_contract_from_name(contract_name)
 
     ###################################################################################
     ###################################################################################
@@ -86,10 +85,8 @@ class NewContract(Call, OperationWithLValue):  # pylint: disable=too-many-instan
     # endregion
 
     def __str__(self):
-        options = ""
-        if self.call_value:
-            options = "value:{} ".format(self.call_value)
+        options = f"value:{self.call_value} " if self.call_value else ""
         if self.call_salt:
-            options += "salt:{} ".format(self.call_salt)
+            options += f"salt:{self.call_salt} "
         args = [str(a) for a in self.arguments]
-        return "{} = new {}({}) {}".format(self.lvalue, self.contract_name, ",".join(args), options)
+        return f'{self.lvalue} = new {self.contract_name}({",".join(args)}) {options}'

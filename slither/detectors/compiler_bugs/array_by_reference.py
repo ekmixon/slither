@@ -75,10 +75,13 @@ As a result, Bob's usage of the contract is incorrect."""
                 # Determine if this function takes an array as a parameter and the location isn't storage.
                 # If it has been written to, we know this sets an non-storage-ref array.
                 for param in function.parameters:
-                    if isinstance(param.type, ArrayType) and param.location != "storage":
-                        if param in function.variables_written:
-                            results.add(function)
-                            break
+                    if (
+                        isinstance(param.type, ArrayType)
+                        and param.location != "storage"
+                        and param in function.variables_written
+                    ):
+                        results.add(function)
+                        break
 
         return results
 
@@ -142,11 +145,9 @@ As a result, Bob's usage of the contract is incorrect."""
         """
         results = []
         array_modifying_funcs = self.get_funcs_modifying_array_params(self.contracts)
-        problematic_calls = self.detect_calls_passing_ref_to_function(
+        if problematic_calls := self.detect_calls_passing_ref_to_function(
             self.contracts, array_modifying_funcs
-        )
-
-        if problematic_calls:
+        ):
             for calling_node, affected_argument, invoked_function in problematic_calls:
                 info = [
                     calling_node.function,

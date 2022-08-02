@@ -53,13 +53,11 @@ def _visit(
     refs = {}
     variables_written = set(variables_written)
     for ir in node.irs:
-        if isinstance(ir, SolidityCall):
-            # TODO convert the revert to a THROW node
-            if ir.function in [
-                SolidityFunction("revert(string)"),
-                SolidityFunction("revert()"),
-            ]:
-                return []
+        if isinstance(ir, SolidityCall) and ir.function in [
+            SolidityFunction("revert(string)"),
+            SolidityFunction("revert()"),
+        ]:
+            return []
 
         if not isinstance(ir, OperationWithLValue):
             continue
@@ -72,9 +70,7 @@ def _visit(
             variables_written.add(ir.lvalue)
 
         lvalue = ir.lvalue
-        while isinstance(lvalue, ReferenceVariable):
-            if lvalue not in refs:
-                break
+        while isinstance(lvalue, ReferenceVariable) and lvalue in refs:
             if refs[lvalue] and not isinstance(
                 refs[lvalue], (TemporaryVariable, ReferenceVariable)
             ):

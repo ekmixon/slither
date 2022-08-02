@@ -34,10 +34,7 @@ class EventSolc:
                 # Comment above a event might be added in the children
                 # of an event for the legacy ast
                 if elem["name"] == "ParameterList":
-                    if "children" in elem:
-                        self._elemsNotParsed = elem["children"]
-                    else:
-                        self._elemsNotParsed = []
+                    self._elemsNotParsed = elem["children"] if "children" in elem else []
 
     @property
     def is_compact_ast(self) -> bool:

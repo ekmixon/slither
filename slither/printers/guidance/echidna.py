@@ -36,17 +36,16 @@ from slither.slithir.variables import Constant
 def _get_name(f: Union[Function, Variable]) -> str:
     # Return the name of the function or variable
     if isinstance(f, Function):
-        if f.is_fallback or f.is_receive:
-            return "()"
-        return f.solidity_signature
+        return "()" if f.is_fallback or f.is_receive else f.solidity_signature
     return f.function_name
 
 
 def _extract_payable(slither: SlitherCore) -> Dict[str, List[str]]:
     ret: Dict[str, List[str]] = {}
     for contract in slither.contracts:
-        payable_functions = [_get_name(f) for f in contract.functions_entry_points if f.payable]
-        if payable_functions:
+        if payable_functions := [
+            _get_name(f) for f in contract.functions_entry_points if f.payable
+        ]:
             ret[contract.name] = payable_functions
     return ret
 
@@ -67,7 +66,7 @@ def _extract_solidity_variable_usage(
     return ret
 
 
-def _is_constant(f: Function) -> bool:  # pylint: disable=too-many-branches
+def _is_constant(f: Function) -> bool:    # pylint: disable=too-many-branches
     """
     Heuristic:
     - If view/pure with Solidity >= 0.4 -> Return true
@@ -78,9 +77,10 @@ def _is_constant(f: Function) -> bool:  # pylint: disable=too-many-branches
     :param f:
     :return:
     """
-    if f.view or f.pure:
-        if not f.contract.compilation_unit.solc_version.startswith("0.4"):
-            return True
+    if (
+        f.view or f.pure
+    ) and not f.contract.compilation_unit.solc_version.startswith("0.4"):
+        return True
     if f.payable:
         return False
     if not f.is_implemented:
@@ -106,10 +106,10 @@ def _is_constant(f: Function) -> bool:  # pylint: disable=too-many-branches
                     return False
             else:
                 return False
-        if isinstance(ir, InternalCall):
-            # Storage write are not properly handled by all_state_variables_written
-            if any(parameter.is_storage for parameter in ir.function.parameters):
-                return False
+        if isinstance(ir, InternalCall) and any(
+            parameter.is_storage for parameter in ir.function.parameters
+        ):
+            return False
     return True
 
 
@@ -147,9 +147,7 @@ def json_serializable(cls):
     my_super = super
 
     def as_dict(self):
-        yield {
-            name: value for name, value in zip(self._fields, iter(my_super(cls, self).__iter__()))
-        }
+        yield dict(zip(self._fields, iter(my_super(cls, self).__iter__())))
 
     cls.__iter__ = as_dict
     return cls
@@ -177,28 +175,31 @@ def _extract_constants_from_irs(  # pylint: disable=too-many-branches,too-many-n
                     all_cst_used_in_binary[str(ir.type)].append(
                         ConstantValue(str(r.value), str(r.type))
                     )
-        if isinstance(ir, TypeConversion):
-            if isinstance(ir.variable, Constant):
-                all_cst_used.append(ConstantValue(str(ir.variable.value), str(ir.type)))
-                continue
+        if isinstance(ir, TypeConversion) and isinstance(
+            ir.variable, Constant
+        ):
+            all_cst_used.append(ConstantValue(str(ir.variable.value), str(ir.type)))
+            continue
         for r in ir.read:
             # Do not report struct_name in a.struct_name
             if isinstance(ir, Member):
                 continue
             if isinstance(r, Constant):
                 all_cst_used.append(ConstantValue(str(r.value), str(r.type)))
-            if isinstance(r, StateVariable):
-                if r.node_initialization:
-                    if r.node_initialization.irs:
-                        if r.node_initialization in context_explored:
-                            continue
-                        context_explored.add(r.node_initialization)
-                        _extract_constants_from_irs(
-                            r.node_initialization.irs,
-                            all_cst_used,
-                            all_cst_used_in_binary,
-                            context_explored,
-                        )
+            if (
+                isinstance(r, StateVariable)
+                and r.node_initialization
+                and r.node_initialization.irs
+            ):
+                if r.node_initialization in context_explored:
+                    continue
+                context_explored.add(r.node_initialization)
+                _extract_constants_from_irs(
+                    r.node_initialization.irs,
+                    all_cst_used,
+                    all_cst_used_in_binary,
+                    context_explored,
+                )
 
 
 def _extract_constants(
@@ -213,8 +214,7 @@ def _extract_constants(
             all_cst_used: List = []
             all_cst_used_in_binary: Dict = defaultdict(list)
 
-            context_explored = set()
-            context_explored.add(function)
+            context_explored = {function}
             _extract_constants_from_irs(
                 function.all_slithir_operations(),
                 all_cst_used,
@@ -335,7 +335,7 @@ class Echidna(AbstractPrinter):
 
     WIKI = "https://github.com/trailofbits/slither/wiki/Printer-documentation#echidna"
 
-    def output(self, filename):  # pylint: disable=too-many-locals
+    def output(self, filename):    # pylint: disable=too-many-locals
         """
         Output the inheritance relation
 
@@ -394,6 +394,4 @@ class Echidna(AbstractPrinter):
 
         self.info(json.dumps(d, indent=4))
 
-        res = self.generate_output(json.dumps(d, indent=4))
-
-        return res
+        return self.generate_output(json.dumps(d, indent=4))

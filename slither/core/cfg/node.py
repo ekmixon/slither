@@ -140,7 +140,7 @@ class NodeType(Enum):
             return "END_LOOP"
         if self == NodeType.OTHER_ENTRYPOINT:
             return "OTHER_ENTRYPOINT"
-        return "Unknown type {}".format(hex(self.value))
+        return f"Unknown type {hex(self.value)}"
 
 
 # endregion
@@ -251,11 +251,12 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
     @property
     def will_return(self) -> bool:
-        if not self.sons and self.type != NodeType.THROW:
-            if SolidityFunction("revert()") not in self.solidity_calls:
-                if SolidityFunction("revert(string)") not in self.solidity_calls:
-                    return True
-        return False
+        return (
+            not self.sons
+            and self.type != NodeType.THROW
+            and SolidityFunction("revert()") not in self.solidity_calls
+            and SolidityFunction("revert(string)") not in self.solidity_calls
+        )
 
     # endregion
     ###################################################################################
@@ -563,8 +564,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
         if self.contains_if(include_loop) or self.contains_require_or_assert():
             return True
         if self.irs:
-            last_ir = self.irs[-1]
-            if last_ir:
+            if last_ir := self.irs[-1]:
                 if isinstance(last_ir, Return):
                     for r in last_ir.read:
                         if r.type == ElementaryType("bool"):
@@ -660,9 +660,7 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
     @property
     def son_true(self) -> Optional["Node"]:
-        if self.type in [NodeType.IF, NodeType.IFLOOP]:
-            return self._sons[0]
-        return None
+        return self._sons[0] if self.type in [NodeType.IF, NodeType.IFLOOP] else None
 
     @property
     def son_false(self) -> Optional["Node"]:
@@ -862,9 +860,12 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
 
             if not isinstance(ir, (Phi, Index, Member)):
                 self._vars_read += [v for v in ir.read if self._is_non_slithir_var(v)]
-                for var in ir.read:
-                    if isinstance(var, ReferenceVariable):
-                        self._vars_read.append(var.points_to_origin)
+                self._vars_read.extend(
+                    var.points_to_origin
+                    for var in ir.read
+                    if isinstance(var, ReferenceVariable)
+                )
+
             elif isinstance(ir, (Member, Index)):
                 var = ir.variable_left if isinstance(ir, Member) else ir.variable_right
                 if self._is_non_slithir_var(var):
@@ -965,9 +966,11 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
                 if isinstance(var, ReferenceVariable):
                     var = var.points_to_origin
                 # Only store non-slithIR variables
-                if var and isinstance(var, (StateIRVariable, LocalIRVariable)):
-                    if isinstance(ir, PhiCallback):
-                        continue
+                if (
+                    var
+                    and isinstance(var, (StateIRVariable, LocalIRVariable))
+                    and not isinstance(ir, PhiCallback)
+                ):
                     self._ssa_vars_written.append(var)
         self._ssa_vars_read = list(set(self._ssa_vars_read))
         self._ssa_state_vars_read = [v for v in self._ssa_vars_read if isinstance(v, StateVariable)]
@@ -1001,11 +1004,10 @@ class Node(SourceMapping, ChildFunction):  # pylint: disable=too-many-public-met
     def __str__(self):
         additional_info = ""
         if self.expression:
-            additional_info += " " + str(self.expression)
+            additional_info += f" {str(self.expression)}"
         elif self.variable_declaration:
-            additional_info += " " + str(self.variable_declaration)
-        txt = str(self._node_type) + additional_info
-        return txt
+            additional_info += f" {str(self.variable_declaration)}"
+        return str(self._node_type) + additional_info
 
 
 # endregion

@@ -35,7 +35,7 @@ class SlitherCompilationUnitSolc:
         self._parsed = False
         self._analyzed = False
 
-        self._underlying_contract_to_parser: Dict[Contract, ContractSolc] = dict()
+        self._underlying_contract_to_parser: Dict[Contract, ContractSolc] = {}
         self._structures_top_level_parser: List[StructureTopLevelSolc] = []
         self._variables_top_level_parser: List[TopLevelVariableSolc] = []
         self._functions_top_level_parser: List[FunctionSolc] = []
@@ -70,14 +70,10 @@ class SlitherCompilationUnitSolc:
     ###################################################################################
 
     def get_key(self) -> str:
-        if self._is_compact_ast:
-            return "nodeType"
-        return "name"
+        return "nodeType" if self._is_compact_ast else "name"
 
     def get_children(self) -> str:
-        if self._is_compact_ast:
-            return "nodes"
-        return "children"
+        return "nodes" if self._is_compact_ast else "children"
 
     @property
     def is_compact_ast(self) -> bool:
@@ -109,7 +105,7 @@ class SlitherCompilationUnitSolc:
             first = json_data.find("{")
             if first != -1:
                 last = json_data.rfind("}") + 1
-                filename = json_data[0:first]
+                filename = json_data[:first]
                 json_data = json_data[first:last]
 
                 data_loaded = json.loads(json_data)
@@ -242,10 +238,7 @@ class SlitherCompilationUnitSolc:
         if data[self.get_key()] != "SourceUnit":
             return  # handle solc prior 0.3.6
 
-        # match any char for filename
-        # filename can contain space, /, -, ..
-        name_candidates = re.findall("=+ (.+) =+", filename)
-        if name_candidates:
+        if name_candidates := re.findall("=+ (.+) =+", filename):
             assert len(name_candidates) == 1
             name: str = name_candidates[0]
         else:
@@ -256,21 +249,24 @@ class SlitherCompilationUnitSolc:
             sourceUnit_candidates = re.findall("[0-9]*:[0-9]*:([0-9]*)", data["src"])
             if len(sourceUnit_candidates) == 1:
                 sourceUnit = int(sourceUnit_candidates[0])
-        if sourceUnit == -1:
-            # if source unit is not found
-            # We can still deduce it, by assigning to the last source_code added
-            # This works only for crytic compile.
-            # which used --combined-json ast, rather than --ast-json
-            # As a result -1 is not used as index
-            if self._compilation_unit.core.crytic_compile is not None:
-                sourceUnit = len(self._compilation_unit.core.source_code)
+        if (
+            sourceUnit == -1
+            and self._compilation_unit.core.crytic_compile is not None
+        ):
+            sourceUnit = len(self._compilation_unit.core.source_code)
 
         self._compilation_unit.source_units[sourceUnit] = name
-        if os.path.isfile(name) and not name in self._compilation_unit.core.source_code:
+        if (
+            os.path.isfile(name)
+            and name not in self._compilation_unit.core.source_code
+        ):
             self._compilation_unit.core.add_source_code(name)
         else:
             lib_name = os.path.join("node_modules", name)
-            if os.path.isfile(lib_name) and not name in self._compilation_unit.core.source_code:
+            if (
+                os.path.isfile(lib_name)
+                and name not in self._compilation_unit.core.source_code
+            ):
                 self._compilation_unit.core.add_source_code(lib_name)
 
     # endregion
@@ -598,7 +594,7 @@ Please rename it, this name is reserved for Slither's internals"""
 
         for func in self._compilation_unit.functions_top_level:
             func.generate_slithir_and_analyze()
-            func.generate_slithir_ssa(dict())
+            func.generate_slithir_ssa({})
         self._compilation_unit.propagate_function_calls()
         for contract in self._compilation_unit.contracts:
             contract.fix_phi()

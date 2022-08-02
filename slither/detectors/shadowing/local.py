@@ -50,7 +50,7 @@ contract Bug {
     OVERSHADOWED_STATE_VARIABLE = "state variable"
     OVERSHADOWED_EVENT = "event"
 
-    def detect_shadowing_definitions(self, contract):  # pylint: disable=too-many-branches
+    def detect_shadowing_definitions(self, contract):    # pylint: disable=too-many-branches
         """Detects if functions, access modifiers, events, state variables, and local variables are named after
         reserved keywords. Any such definitions are returned in a list.
 
@@ -69,23 +69,32 @@ contract Bug {
                 overshadowed = []
                 for scope_contract in [contract] + contract.inheritance:
                     # Check functions
-                    for scope_function in scope_contract.functions_declared:
-                        if variable.name == scope_function.name:
-                            overshadowed.append((self.OVERSHADOWED_FUNCTION, scope_function))
+                    overshadowed.extend(
+                        (self.OVERSHADOWED_FUNCTION, scope_function)
+                        for scope_function in scope_contract.functions_declared
+                        if variable.name == scope_function.name
+                    )
+
                     # Check modifiers
-                    for scope_modifier in scope_contract.modifiers_declared:
-                        if variable.name == scope_modifier.name:
-                            overshadowed.append((self.OVERSHADOWED_MODIFIER, scope_modifier))
+                    overshadowed.extend(
+                        (self.OVERSHADOWED_MODIFIER, scope_modifier)
+                        for scope_modifier in scope_contract.modifiers_declared
+                        if variable.name == scope_modifier.name
+                    )
+
                     # Check events
-                    for scope_event in scope_contract.events_declared:
-                        if variable.name == scope_event.name:
-                            overshadowed.append((self.OVERSHADOWED_EVENT, scope_event))
+                    overshadowed.extend(
+                        (self.OVERSHADOWED_EVENT, scope_event)
+                        for scope_event in scope_contract.events_declared
+                        if variable.name == scope_event.name
+                    )
+
                     # Check state variables
-                    for scope_state_variable in scope_contract.state_variables_declared:
-                        if variable.name == scope_state_variable.name:
-                            overshadowed.append(
-                                (self.OVERSHADOWED_STATE_VARIABLE, scope_state_variable)
-                            )
+                    overshadowed.extend(
+                        (self.OVERSHADOWED_STATE_VARIABLE, scope_state_variable)
+                        for scope_state_variable in scope_contract.state_variables_declared
+                        if variable.name == scope_state_variable.name
+                    )
 
                 # If we have found any overshadowed objects, we'll want to add it to our result list.
                 if overshadowed:
@@ -104,8 +113,7 @@ contract Bug {
 
         results = []
         for contract in self.contracts:
-            shadows = self.detect_shadowing_definitions(contract)
-            if shadows:
+            if shadows := self.detect_shadowing_definitions(contract):
                 for shadow in shadows:
                     local_variable = shadow[0]
                     overshadowed = shadow[1]

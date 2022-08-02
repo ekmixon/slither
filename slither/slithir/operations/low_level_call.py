@@ -87,15 +87,9 @@ class LowLevelCall(Call, OperationWithLValue):  # pylint: disable=too-many-insta
         return self._type_call
 
     def __str__(self):
-        value = ""
-        gas = ""
-        if self.call_value:
-            value = "value:{}".format(self.call_value)
-        if self.call_gas:
-            gas = "gas:{}".format(self.call_gas)
-        arguments = []
-        if self.arguments:
-            arguments = self.arguments
+        value = f"value:{self.call_value}" if self.call_value else ""
+        gas = f"gas:{self.call_gas}" if self.call_gas else ""
+        arguments = self.arguments or []
         return_type = self.lvalue.type
 
         if return_type and isinstance(return_type, list):

@@ -8,10 +8,11 @@ Consider public state variables as implemented functions
 Do not consider fallback function or constructor
 """
 
+
 from slither.detectors.abstract_detector import AbstractDetector, DetectorClassification
 
 # Since 0.5.1, Solidity allows creating state variable matching a function signature.
-older_solc_versions = ["0.5.0"] + ["0.4." + str(x) for x in range(0, 27)]
+older_solc_versions = ["0.5.0"] + [f"0.4.{str(x)}" for x in range(27)]
 
 
 class UnimplementedFunctionDetection(AbstractDetector):
@@ -69,23 +70,21 @@ All unimplemented functions must be implemented on a contract that is meant to b
         if contract.is_signature_only():
             return set()
 
-        # Populate our unimplemented functions set with any functions not implemented in this contract, excluding the
-        # fallback function and constructor.
-        unimplemented = set()
-        for f in contract.all_functions_called:
+        return {
+            f
+            for f in contract.all_functions_called
             if (
                 not f.is_implemented
                 and not f.is_constructor
                 and not f.is_fallback
                 and not f.is_constructor_variables
-            ):
-                if self.compilation_unit.solc_version not in older_solc_versions:
-                    # Since 0.5.1, Solidity allows creating state variable matching a function signature
-                    if not self._match_state_variable(contract, f):
-                        unimplemented.add(f)
-                else:
-                    unimplemented.add(f)
-        return unimplemented
+            )
+            and (
+                self.compilation_unit.solc_version not in older_solc_versions
+                and not self._match_state_variable(contract, f)
+                or self.compilation_unit.solc_version in older_solc_versions
+            )
+        }
 
     def _detect(self):
         """Detect unimplemented functions
@@ -96,8 +95,7 @@ All unimplemented functions must be implemented on a contract that is meant to b
         """
         results = []
         for contract in self.compilation_unit.contracts_derived:
-            functions = self._detect_unimplemented_function(contract)
-            if functions:
+            if functions := self._detect_unimplemented_function(contract):
                 info = [contract, " does not implement functions:\n"]
 
                 for function in sorted(functions, key=lambda x: x.full_name):

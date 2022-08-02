@@ -137,11 +137,11 @@ MinValues = dict(dict(Min_Int, **Min_Uint), **Min_Byte)
 
 # https://solidity.readthedocs.io/en/v0.4.24/types.html#fixed-point-numbers
 M = list(range(8, 257, 8))
-N = list(range(0, 81))
+N = list(range(81))
 MN = list(itertools.product(M, N))
 
-Fixed = ["fixed{}x{}".format(m, n) for (m, n) in MN] + ["fixed"]
-Ufixed = ["ufixed{}x{}".format(m, n) for (m, n) in MN] + ["ufixed"]
+Fixed = [f"fixed{m}x{n}" for (m, n) in MN] + ["fixed"]
+Ufixed = [f"ufixed{m}x{n}" for (m, n) in MN] + ["ufixed"]
 
 ElementaryTypeName = ["address", "bool", "string", "var"] + Int + Uint + Byte + Fixed + Ufixed
 
@@ -185,20 +185,16 @@ class ElementaryType(Type):
         if t.startswith("int"):
             return int(t[len("int") :])
         if t == "bool":
-            return int(8)
+            return 8
         if t == "address":
-            return int(160)
-        if t.startswith("bytes"):
-            return int(t[len("bytes") :])
-        return None
+            return 160
+        return int(t[len("bytes") :]) if t.startswith("bytes") else None
 
     @property
     def storage_size(self) -> Tuple[int, bool]:
-        if self._type == "string" or self._type == "bytes":
+        if self._type in ["string", "bytes"]:
             return 32, True
-        if self.size is None:
-            return 32, True
-        return int(self.size / 8), False
+        return (32, True) if self.size is None else (int(self.size / 8), False)
 
     @property
     def min(self) -> int:
@@ -216,9 +212,7 @@ class ElementaryType(Type):
         return self._type
 
     def __eq__(self, other):
-        if not isinstance(other, ElementaryType):
-            return False
-        return self.type == other.type
+        return self.type == other.type if isinstance(other, ElementaryType) else False
 
     def __hash__(self):
         return hash(str(self))

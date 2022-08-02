@@ -63,14 +63,13 @@ All the calls to `get` revert, breaking Bob's smart contract execution."""
             for f in c.functions:
                 if f.contract_declarer != c:
                     continue
-                if f.view or f.pure:
-                    if f.contains_assembly:
-                        attr = "view" if f.view else "pure"
+                if (f.view or f.pure) and f.contains_assembly:
+                    attr = "view" if f.view else "pure"
 
-                        info = [f, f" is declared {attr} but contains assembly code\n"]
-                        res = self.generate_result(info, {"contains_assembly": True})
+                    info = [f, f" is declared {attr} but contains assembly code\n"]
+                    res = self.generate_result(info, {"contains_assembly": True})
 
-                        results.append(res)
+                    results.append(res)
 
         return results
 

@@ -30,9 +30,7 @@ When reading `B`'s constructor definition, we might assume that `A()` initiates 
         """"""
         results = []
         for c in self.contracts:
-            cst = c.constructor
-            if cst:
-
+            if cst := c.constructor:
                 for constructor_call in cst.explicit_base_constructor_calls_statements:
                     for node in constructor_call.nodes:
                         if any(isinstance(ir, Nop) for ir in node.irs):

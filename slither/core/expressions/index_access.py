@@ -33,4 +33,4 @@ class IndexAccess(ExpressionTyped):
         return self._type
 
     def __str__(self):
-        return str(self.expression_left) + "[" + str(self.expression_right) + "]"
+        return f"{str(self.expression_left)}[{str(self.expression_right)}]"

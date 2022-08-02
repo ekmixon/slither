@@ -50,7 +50,7 @@ contract MyConc{
             or not isinstance(ir.function, Function)
         )
 
-    def detect_unused_return_values(self, f):  # pylint: disable=no-self-use
+    def detect_unused_return_values(self, f):    # pylint: disable=no-self-use
         """
             Return the nodes where the return value of a call is unused
         Args:
@@ -62,11 +62,13 @@ contract MyConc{
         nodes_origin = {}
         for n in f.nodes:
             for ir in n.irs:
-                if self._is_instance(ir):
-                    # if a return value is stored in a state variable, it's ok
-                    if ir.lvalue and not isinstance(ir.lvalue, StateVariable):
-                        values_returned.append(ir.lvalue)
-                        nodes_origin[ir.lvalue] = ir
+                if (
+                    self._is_instance(ir)
+                    and ir.lvalue
+                    and not isinstance(ir.lvalue, StateVariable)
+                ):
+                    values_returned.append(ir.lvalue)
+                    nodes_origin[ir.lvalue] = ir
                 for read in ir.read:
                     if read in values_returned:
                         values_returned.remove(read)
@@ -80,9 +82,7 @@ contract MyConc{
             for f in c.functions + c.modifiers:
                 if f.contract_declarer != c:
                     continue
-                unused_return = self.detect_unused_return_values(f)
-                if unused_return:
-
+                if unused_return := self.detect_unused_return_values(f):
                     for node in unused_return:
                         info = [f, " ignores return value by ", node, "\n"]
 

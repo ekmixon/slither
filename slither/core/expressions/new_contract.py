@@ -30,4 +30,4 @@ class NewContract(Expression):
         self._salt = salt
 
     def __str__(self):
-        return "new " + str(self._contract_name)
+        return f"new {str(self._contract_name)}"

@@ -68,7 +68,7 @@ Only report reentrancy that is based on `transfer` or `send`."""
                     if self.KEY not in node.context:
                         continue
                     if node.context[self.KEY].calls:
-                        if not any(n != node for n in node.context[self.KEY].calls):
+                        if all(n == node for n in node.context[self.KEY].calls):
                             continue
 
                         # calls are ordered

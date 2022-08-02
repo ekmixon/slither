@@ -86,7 +86,7 @@ class BinaryType(Enum):
         if operation_type == "||":
             return BinaryType.OROR
 
-        raise SlithIRError("get_type: Unknown operation type {})".format(operation_type))
+        raise SlithIRError(f"get_type: Unknown operation type {operation_type})")
 
     def can_be_checked_for_overflow(self):
         return self in [
@@ -137,7 +137,7 @@ class BinaryType(Enum):
             return "&&"
         if self == BinaryType.OROR:
             return "||"
-        raise SlithIRError("str: Unknown operation type {} {})".format(self, type(self)))
+        raise SlithIRError(f"str: Unknown operation type {self} {type(self)})")
 
 
 class Binary(OperationWithLValue):
@@ -178,7 +178,7 @@ class Binary(OperationWithLValue):
     @property
     def type_str(self):
         if self.node.scope.is_checked and self._type.can_be_checked_for_overflow():
-            return "(c)" + str(self._type)
+            return f"(c){str(self._type)}"
         return str(self._type)
 
     def __str__(self):
@@ -186,17 +186,6 @@ class Binary(OperationWithLValue):
             points = self.lvalue.points_to
             while isinstance(points, ReferenceVariable):
                 points = points.points_to
-            return "{}(-> {}) = {} {} {}".format(
-                str(self.lvalue),
-                points,
-                self.variable_left,
-                self.type_str,
-                self.variable_right,
-            )
-        return "{}({}) = {} {} {}".format(
-            str(self.lvalue),
-            self.lvalue.type,
-            self.variable_left,
-            self.type_str,
-            self.variable_right,
-        )
+            return f"{str(self.lvalue)}(-> {points}) = {self.variable_left} {self.type_str} {self.variable_right}"
+
+        return f"{str(self.lvalue)}({self.lvalue.type}) = {self.variable_left} {self.type_str} {self.variable_right}"

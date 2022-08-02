@@ -91,8 +91,9 @@ Initialize all the variables. If a variable is meant to be initialized to zero, 
     def _written_variables_in_proxy(self, contract):
         variables = []
         if contract.is_upgradeable:
-            variables_name_written_in_proxy = self._variable_written_in_proxy()
-            if variables_name_written_in_proxy:
+            if (
+                variables_name_written_in_proxy := self._variable_written_in_proxy()
+            ):
                 variables_in_contract = [
                     contract.get_state_variable_from_name(v)
                     for v in variables_name_written_in_proxy

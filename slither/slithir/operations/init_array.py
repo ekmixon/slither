@@ -15,9 +15,7 @@ class InitArray(OperationWithLValue):
             return result
 
         def check(elem):
-            if isinstance(elem, (list,)):
-                return reduce(elem)
-            return is_valid_rvalue(elem)
+            return reduce(elem) if isinstance(elem, (list,)) else is_valid_rvalue(elem)
 
         assert check(init_values)
         self._init_values = init_values

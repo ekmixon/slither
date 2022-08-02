@@ -98,8 +98,7 @@ Special care must be taken when initializing state variables from an immediate f
         """
         results = []
         for contract in self.contracts:
-            state_variables = detect_function_init_state_vars(contract)
-            if state_variables:
+            if state_variables := detect_function_init_state_vars(contract):
                 for state_variable in state_variables:
                     info = [
                         state_variable,

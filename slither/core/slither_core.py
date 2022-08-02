@@ -110,8 +110,7 @@ class SlitherCore(Context):
         """
         contracts = []
         for compilation_unit in self._compilation_units:
-            contract = compilation_unit.get_contract_from_name(contract_name)
-            if contract:
+            if contract := compilation_unit.get_contract_from_name(contract_name):
                 contracts.append(contract)
         return contracts
 
@@ -157,7 +156,7 @@ class SlitherCore(Context):
         for compilation_unit in self._compilation_units:
             for c in compilation_unit.contracts:
                 for f in c.functions:
-                    f.cfg_to_dot(os.path.join(d, "{}.{}.dot".format(c.name, f.name)))
+                    f.cfg_to_dot(os.path.join(d, f"{c.name}.{f.name}.dot"))
 
     # endregion
     ###################################################################################
@@ -186,13 +185,13 @@ class SlitherCore(Context):
 
         for file, lines in mapping_elements_with_lines:
             ignore_line_index = min(lines) - 1
-            ignore_line_text = self.crytic_compile.get_code_from_line(file, ignore_line_index)
-            if ignore_line_text:
-                match = re.findall(
+            if ignore_line_text := self.crytic_compile.get_code_from_line(
+                file, ignore_line_index
+            ):
+                if match := re.findall(
                     r"^\s*//\s*slither-disable-next-line\s*([a-zA-Z0-9_,-]*)",
                     ignore_line_text.decode("utf8"),
-                )
-                if match:
+                ):
                     ignored = match[0].split(",")
                     if ignored and ("all" in ignored or any(r["check"] == c for c in ignored)):
                         return True
@@ -250,7 +249,9 @@ class SlitherCore(Context):
         if self.has_ignore_comment(r):
             return False
         # Conserve previous result filtering. This is conserved for compatibility, but is meant to be removed
-        return not r["description"] in [pr["description"] for pr in self._previous_results]
+        return r["description"] not in [
+            pr["description"] for pr in self._previous_results
+        ]
 
     def load_previous_results(self):
         filename = self._previous_results_filename
@@ -264,7 +265,7 @@ class SlitherCore(Context):
                                 self._previous_results_ids.add(r["id"])
         except json.decoder.JSONDecodeError:
             logger.error(
-                red("Impossible to decode {}. Consider removing the file".format(filename))
+                red(f"Impossible to decode {filename}. Consider removing the file")
             )
 
     def write_results_to_hide(self):

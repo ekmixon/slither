@@ -39,15 +39,19 @@ The shift statement will right-shift the constant 8 by `a` bits"""
 
         for node in f.nodes:
             for ir in node.irs:
-                if isinstance(ir, Binary) and ir.type in [
-                    BinaryType.LEFT_SHIFT,
-                    BinaryType.RIGHT_SHIFT,
-                ]:
-                    if isinstance(ir.variable_left, Constant):
-                        info = [f, " contains an incorrect shift operation: ", node, "\n"]
-                        json = self.generate_result(info)
+                if (
+                    isinstance(ir, Binary)
+                    and ir.type
+                    in [
+                        BinaryType.LEFT_SHIFT,
+                        BinaryType.RIGHT_SHIFT,
+                    ]
+                    and isinstance(ir.variable_left, Constant)
+                ):
+                    info = [f, " contains an incorrect shift operation: ", node, "\n"]
+                    json = self.generate_result(info)
 
-                        results.append(json)
+                    results.append(json)
         return results
 
     def _detect(self):

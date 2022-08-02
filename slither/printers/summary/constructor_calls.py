@@ -23,20 +23,18 @@ class ConstructorPrinter(AbstractPrinter):
         for contract in self.slither.contracts_derived:
             stack_name = []
             stack_definition = []
-            cst = contract.constructors_declared
-            if cst:
+            if cst := contract.constructors_declared:
                 stack_name.append(contract.name)
                 stack_definition.append(self._get_soruce_code(cst))
             for inherited_contract in contract.inheritance:
-                cst = inherited_contract.constructors_declared
-                if cst:
+                if cst := inherited_contract.constructors_declared:
                     stack_name.append(inherited_contract.name)
                     stack_definition.append(self._get_soruce_code(cst))
 
-            if len(stack_name) > 0:
+            if stack_name:
 
                 info += "\n########" + "#" * len(contract.name) + "########\n"
-                info += "####### " + contract.name + " #######\n"
+                info += f"####### {contract.name}" + " #######\n"
                 info += "########" + "#" * len(contract.name) + "########\n\n"
                 info += "## Constructor Call Sequence" + "\n"
 
@@ -50,5 +48,4 @@ class ConstructorPrinter(AbstractPrinter):
                     count = count - 1
 
         self.info(info)
-        res = output.Output(info)
-        return res
+        return output.Output(info)

@@ -16,4 +16,4 @@ class TypeConversion(ExpressionTyped):
         return self._expression
 
     def __str__(self):
-        return str(self.type) + "(" + str(self.expression) + ")"
+        return f"{str(self.type)}({str(self.expression)})"

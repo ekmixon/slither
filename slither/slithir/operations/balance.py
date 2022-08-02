@@ -21,4 +21,4 @@ class Balance(OperationWithLValue):
         return self._value
 
     def __str__(self):
-        return "{} -> BALANCE {}".format(self.lvalue, self.value)
+        return f"{self.lvalue} -> BALANCE {self.value}"
